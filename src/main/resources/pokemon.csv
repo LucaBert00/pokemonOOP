@@ -1,0 +1,17 @@
+# name, element1, element2 (or -), maxHp, level, attack, defense, spAttack, spDefense, speed, move1, move2, move3, move4
+Pikachu,ELECTRIC,-,35,50,55,40,50,50,90,ThunderWave,Thunderbolt,Thunder,QuickAttack
+Charmander,FIRE,-,39,50,52,43,60,50,65,Ember,Scratch,Flamethrower,SwordsDance
+Squirtle,WATER,-,44,50,48,65,50,64,43,WaterGun,Tackle,Surf,Recover
+Bulbasaur,GRASS,POISON,45,50,49,49,65,65,45,VineWhip,MegaDrain,BodySlam,SwordsDance
+Onix,ROCK,GROUND,35,50,45,160,30,45,70,RockThrow,BodySlam,Tackle,Guillotine
+Machop,FIGHTING,-,70,50,80,50,35,35,35,KarateChop,TripleKick,CrossChop,BodySlam
+Pidgeot,NORMAL,FLYING,83,50,80,75,70,70,101,Tackle,BodySlam,QuickAttack,FuryAttack
+Gengar,GHOST,POISON,60,50,65,60,130,75,110,BodySlam,MegaDrain,Guillotine,SwordsDance
+Haunter,GHOST,POISON,45,50,50,45,115,55,95,WillOWisp,SludgeBomb,MegaDrain,Guillotine
+Ninetales,FIRE,-,73,50,76,75,81,100,100,WillOWisp,Flamethrower,Ember,QuickAttack
+Weezing,POISON,-,65,50,90,120,85,70,60,Toxic,SludgeBomb,BodySlam,Tackle
+Parasect,BUG,GRASS,60,50,95,80,60,80,30,Spore,MegaDrain,Scratch,SwordsDance
+Lapras,WATER,ICE,130,50,85,80,85,95,60,IceBeam,Surf,WaterGun,BodySlam
+Dewgong,WATER,ICE,90,50,70,80,70,95,70,IceBeam,WaterGun,Surf,Recover
+Muk,POISON,-,105,50,105,75,65,100,50,Toxic,SludgeBomb,BodySlam,Tackle
+Alakazam,PSYCHIC,-,55,50,50,45,135,95,120,Tackle,Recover,QuickAttack,Guillotine
