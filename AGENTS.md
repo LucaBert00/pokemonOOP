@@ -5,7 +5,7 @@ complete change, real-user verification); this file adds the project specifics.
 
 ## Project
 
-A Java 11 terminal Pokémon battle that implements the object-oriented DSL from Christopher
+A Java 27 terminal Pokémon battle that implements the object-oriented DSL from Christopher
 Okhravi's *Rebuilding Pokémon with Object Oriented Programming*. The companion video names
 the design patterns the DSL accidentally uses. Read [CONTEXT.md](CONTEXT.md) before
 changing the model, and the two transcript files when a behaviour needs its source.
@@ -14,11 +14,11 @@ changing the model, and the two transcript files when a behaviour needs its sour
 
 ```powershell
 mvn -q compile                                  # fast check
-mvn -q package                                  # build the executable JAR
-java -jar target/PokemonOOP-1.0-SNAPSHOT.jar    # play (Java 11+)
+mvn -q clean package                            # build the executable JAR
+java -jar target/PokemonOOP-1.0-SNAPSHOT.jar    # play (Java 27+)
 ```
 
-If `java` on `PATH` is older than 11, use the JDK Maven used:
+If `java` on `PATH` is older than 27, use the JDK Maven used:
 `& "$env:JAVA_HOME\bin\java" -jar target/PokemonOOP-1.0-SNAPSHOT.jar`.
 
 There is no test suite and no test dependency. The battle itself is the integration test:
@@ -26,7 +26,7 @@ run it, pick a Pokémon, pick moves, watch the output.
 
 ## Non-negotiables
 
-- **Java 11, no new dependencies.** The `pom.xml` has none and should stay that way.
+- **Java 27, no new dependencies.** The `pom.xml` has none and should stay that way.
 - **The DSL is the design.** `com.pokemon.api` defines six interfaces; variation is a new
   implementation or a new composition, never a branch on a move name, type or string.
 - **`Move` stays data.** It holds name, element and attempt, delegates, and prints its

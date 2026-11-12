@@ -23,7 +23,7 @@ roster, type chart, status rules and battle loop are additions needed to make it
 
 | | |
 |---|---|
-| Language | Java 11 |
+| Language | Java 27 |
 | Build | Maven (`pom.xml`), executable JAR |
 | Entry point | `com.pokemon.Main` |
 | Data | `src/main/resources/pokemon.csv` |
@@ -33,12 +33,12 @@ roster, type chart, status rules and battle loop are additions needed to make it
 ## Build and run
 
 ```powershell
-mvn -q package
+mvn -q clean package
 java -jar target/PokemonOOP-1.0-SNAPSHOT.jar
 ```
 
-The JAR is Java 11 bytecode; run it with Java 11 or newer. If `java` on `PATH` is an older
-JRE, use the JDK that Maven used:
+The JAR is Java 27 bytecode (`maven.compiler.release=27`); run it with Java 27 or newer.
+If `java` on `PATH` is an older JRE, use the JDK that Maven used:
 
 ```powershell
 & "$env:JAVA_HOME\bin\java" -jar target/PokemonOOP-1.0-SNAPSHOT.jar

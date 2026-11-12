@@ -1,0 +1,236 @@
+# FINDINGS — Audit di fedeltà e roadmap
+
+Audit del progetto rispetto a `TRANSCRIPT-01-rebuilding-pokemon-with-oop.md` e
+`TRANSCRIPT-02-accidentally-used-design-patterns.md`, con stato del codice, bug noti e
+piano di correzione.
+
+Il progetto è **fedele nell'architettura**, non al 100% nei dettagli. Il DSL del video 1
+c'è tutto; i cinque pattern del video 2 ci sono a livello di tipi. Roster, type chart,
+status e battle loop sono aggiunte dichiarate, non parti dei video.
+
+## JDK 27
+
+Il progetto è stato portato da Java 11 a Java 27.
+
+- `pom.xml`: rimosse `maven.compiler.source`/`target` 11, aggiunto
+  `<maven.compiler.release>27</maven.compiler.release>`.
+- `CONTEXT.md` e `AGENTS.md`: aggiornati a Java 27 e ai comandi di build/run.
+- `mvn -q clean package`: passa.
+- Bytecode verificato: `major version: 71` (Java 27).
+- Runtime verificato: Temurin 27+35.
+- Due battaglie complete giocate dal JAR: selezione, menu, turni, danno, faint,
+  vittoria/sconfitta, uscita con codice 0.
+
+**Attenzione:** `java` sul `PATH` è ancora 1.8.0_401. Con `java -jar` il JAR non parte,
+perché è bytecode 71. Usare:
+
+```powershell
+& "$env:JAVA_HOME\bin\java" -jar target/PokemonOOP-1.0-SNAPSHOT.jar
+```
+
+oppure aggiornare il `PATH`. Maven usa già JDK 27. I warning del build arrivano dalle
+librerie di Maven/Jansi, non dal progetto.
+
+## Fedeltà al video 1
+
+### Cosa è fedele
+
+- `IMove`, `IAttempt`, `IEffect`, `ICondition<T>`, `INumber`, `ITarget`.
+- `Move(name, element, attempt)`.
+- `Attempt(animation, accuracy, onHit, onMiss, after)` con overload che usa `NoEffect`
+  per gli slot vuoti.
+- `Cascade`: ferma la catena al primo miss.
+- `Combo`: un solo tiro di accuratezza, conteggio da `INumber`, effetto ripetuto.
+- `Sequence`, `ConditionalEffect`, `NoEffect`.
+- `For` come lifting da `ICondition<Battler>` a `ICondition<Battle>`.
+- `And`, `Or`, `Not`, `Probability`, `HasElement`, `IsParalyzed`.
+- `Exactly`, `Sum`, `Product`, `Quotient`, `MaxHP`, `CurrentHP`, `Level`, `Weighted`,
+  `LastDamageDealt`.
+- `Attacker`, `Defender`.
+- `Tackle` (95%, 40), `Triple Kick` (3 × 90%, 10/20/30), `Fury Attack` nella forma,
+  `Thunder Wave` nella forma, `Body Slam` nel danno e nella paralisi al 30%,
+  `Jump Kick` nella matematica.
+
+### Scostamenti
+
+| # | Scostamento | Tipo | Dettaglio |
+|---|---|---|---|
+| 1 | Ordine dei decoratori invertito in Thunder Wave e Will-O-Wisp | Fedeltà | Il video mette `WithApplicability` **fuori** e `WithPrecondition` dentro. Il codice fa il contrario. Si nota quando falliscono entrambe: contro un Ground già paralizzato il codice dice "But it failed!" invece di "It doesn't affect …". |
+| 2 | Nomi delle mosse decorate nel menu | Bug | Il menu mostra `WithPrecondition` e `WithApplicability` invece di Thunder Wave, Thunderbolt, Thunder, Will-O-Wisp. `BattleEngine.moveName` scompatta solo `Move`; `MoveRegistry.displayName` è morto. |
+| 3 | Manca "X used Y!" quando fallisce precondizione/applicabilità | Bug di output | Verificato contro Onix: il gioco stampa solo "It doesn't affect Onix!", senza "Pikachu used Thunder Wave!". Il `Move` interno non viene eseguito, quindi non stampa la riga. |
+| 4 | Jump Kick non usa `CrashDamage` | Fedeltà | Il video descrive un effetto distinto, con messaggio "kept going and crashed". Il codice usa `DirectDamage`, che stampa "took X direct damage". La matematica è giusta; mancano il tipo e il messaggio. |
+| 5 | Body Slam ha accuratezza 85% | Fedeltà dubbia | Il transcript non dice l'accuratezza di Body Slam. 85% è un valore inventato; per fedeltà va messo 100% o il valore della slide, se verificabile. |
+| 6 | Combo: animazione una volta e conteggio sbagliato | Fedeltà + bug | Il video dice "play the animation, make damage" per **ogni** hit. Il codice stampa l'animazione una volta e stampa il numero di hit tirato, anche se il difensore va KO prima. |
+| 7 | `Leq`/`Geq` hanno il tipo sbagliato | Fedeltà minore | Il video li descrive come `ICondition<INumber>`; il codice li fa `ICondition<Battle>` e valuta il numero dentro `check`. Non sono usati da nessuna mossa. |
+| 8 | Random non è nel contesto di battaglia | Fedeltà minore | Il video suggerisce un randomizer con seed nel `Battle`. Il codice chiama `Math.random()` in `Weighted`, `Probability`, `FormulaDamage`, `Main` e `BattleEngine`. Il design resta componibile, ma non è riproducibile. |
+
+Nota su Body Slam: il transcript a un certo punto dice "80%" per la paralisi, ma è un
+lapsus; il valore coerente con il resto della spiegazione è 30%, ed è quello che il codice
+usa.
+
+## Fedeltà al video 2
+
+| Pattern | Dove | Verdetto |
+|---|---|---|
+| **Strategy** | `INumber` in `FormulaDamage`, `IEffect` in `Attempt`, `ICondition` per accuratezza/applicabilità | Corretto. Famiglie di algoritmi intercambiabili. |
+| **Composite** | `Sum`/`Product`/`Quotient`, `Sequence`/`ConditionalEffect`, `And`/`Or`/`Not`, `Cascade`/`Combo` | Corretto. Il composto implementa la stessa interfaccia della foglia. |
+| **Decorator** | `WithPrecondition`, `WithApplicability` | Forma corretta: stessa interfaccia, un solo componente avvolto. Ordine sbagliato in due mosse. |
+| **Command** | `IMove` comando, `Battle` receiver, `Battler` tiene le mosse, `BattleEngine` chiama `execute` | Corretto, con una sfumatura: il video identifica l'invoker nel `Battler`; qui il ruolo è diviso tra `Battler` (tiene) e `BattleEngine` (invoca). Non è un fallimento del pattern, è una scelta architetturale. |
+| **Null Object** | `NoEffect` come default di `onMiss`/`after` e come else di `ConditionalEffect` | Corretto. Gli slot non sono mai `null`. |
+
+## Stato del progetto
+
+### Funziona (verificato)
+
+- Caricamento di **16 Pokémon** da `pokemon.csv` e **27 mosse** da `MoveRegistry`.
+- Selezione del giocatore, CPU casuale diversa, ordine per Speed.
+- Menu, attacco, danno con STAB e type chart, faint, vittoria/sconfitta.
+- Controlli di sonno, congelamento e paralisi prima dell'azione.
+- Mosse decorate, mosse di stato, cura, drain, multi-hit, OHKO, cambio statistica.
+- Due battaglie reali: Pikachu vs Alakazam (vinta con Thunderbolt) e Pikachu vs Onix
+  (persa; Thunder Wave bloccata dall'immunità Ground).
+
+### Non funziona (bug del gioco aggiunto)
+
+1. **Il sonno è permanente.** `Sleep` mette `asleep=true`; il motore salta il turno, ma
+   niente resetta il flag. Non esiste una cura esterna nonostante il commento. In pratica
+   chi si addormenta non agisce più.
+2. **Il danno residuo di burn/poison è applicato dopo ogni mezza azione**, non alla fine
+   del round. Inoltre, se il turno viene saltato per sonno/freeze/paralisi, il danno
+   residuo non viene applicato affatto, perché la funzione esce prima.
+3. **Gli status non si escludono.** Un Pokémon può essere paralizzato, bruciato,
+   avvelenato e congelato insieme. Lo `statusTag` mostra solo il primo; il danno residuo
+   ne applica solo uno.
+4. **Toxic non scala.** `BadlyPoison` fa sempre `maxHp / 16`; manca il contatore
+   1/16, 2/16, 3/16…
+5. **`spAttack`/`spDefense` sono caricati ma inutilizzati.** `FormulaDamage` usa solo
+   Attack/Defense. Le statistiche speciali sono decorazione.
+6. **`Drain` cura almeno 1 HP anche su danno 0**; `RestoreHP` stampa "recovered X HP"
+   anche a HP già pieni, dove la cura reale è 0.
+7. **`Between` dice "inclusive" ma il massimo è escluso**; è anche inutilizzato.
+8. **`MoveRegistry.get` fa fallback silenzioso a Tackle** su una chiave sconosciuta. Un
+   typo nel CSV diventa una mossa normale senza errore.
+9. **Codice morto:** `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`,
+   `Battle.flipTurn`, `MoveRegistry.displayName`.
+
+### È vuoto (non implementato, non necessariamente un problema)
+
+- PP, switching, oggetti, abilità, meteo, priorità, critici.
+- Durata degli status, immunità di tipo agli status, rampa di Toxic.
+- Salvataggi, caricamento partita, account.
+- Test automatici.
+- Interfaccia web.
+- PokéAPI.
+- Database.
+
+Nessun file è uno stub vuoto: le classi "vuote" sopra sono implementazioni non collegate
+o non usate, non file lasciati a metà.
+
+## Struttura del progetto
+
+La struttura dei package è corretta. `api` contiene le sei interfacce; `moves`,
+`attempts`, `effects`, `conditions`, `numbers`, `targets` contengono le implementazioni per
+ruolo; `battle` tiene lo stato; `data` tiene registry, loader e type chart; `Main` e
+`BattleEngine` sono l'applicazione. Non ci sono dipendenze circolari evidenti e non c'è
+nessuno `switch` sul nome di una mossa.
+
+Tre punti da migliorare, senza ristrutturare adesso:
+
+1. **`IMove` non espone il nome.** È la causa del bug del menu. La soluzione pulita è
+   aggiungere `String getName()` a `IMove`, farlo delegare dai decoratori e usarlo nel
+   motore. È un'estensione pragmatica, non una violazione del video.
+2. **`Battle` è un piccolo bus mutabile** (`lastAttemptHit`, `lastDamageDealt`,
+   `currentMoveElement`). Funziona, ma se il DSL cresce questi campi diventano
+   accoppiamenti nascosti. Per ora va bene.
+3. **`BattleEngine` mescola UI, turni, status e scelta mosse.** A 260 righe è gestibile; se
+   aggiungi switching, oggetti e abilità, va spezzato in `BattleUI` e `BattleRules`.
+
+## Framework o Java puro?
+
+Java puro + Maven è la scelta giusta. Non aggiungere Spring, Quarkus o un framework web:
+il progetto esiste per mostrare il DSL, e un framework aggiungerebbe annotazioni, DI e
+lifecycle proprio dove vuoi che si veda la composizione a oggetti. Maven basta; Gradle non
+serve. JDK 27 va bene, ma non riscrivere il codice con record/sealed/pattern matching solo
+per usare le novità: lo stile classico rispecchia il video ed è più leggibile per chi studia
+il design.
+
+Se un giorno aggiungi una web UI o un'API REST, metti un adapter sottile **sopra** il
+dominio (`com.pokemon.web`), non dentro `IMove`/`IEffect`. A quel punto un framework web è
+giustificato dal layer HTTP, non dal modello.
+
+## CSV o database?
+
+Ora no: il CSV è sufficiente e corretto. Ci sono 16 righe, 27 mosse, caricamento
+all'avvio, nessuna scrittura, nessuna query, nessuna concorrenza. Un database aggiungerebbe
+schema, migrazioni, JDBC, gestione connessioni e test per zero benefici.
+
+Passare a un database quando arriva almeno uno di questi:
+
+- cache di PokéAPI con molte entità e bisogno di query/filtri;
+- salvataggi o statistiche persistenti;
+- account utente o backend web multiutente.
+
+In quel caso partire da **SQLite** (file singolo, zero server), non da PostgreSQL. Niente
+JPA/Hibernate: JDBC o un DAO piccolo. Tenere il CSV come fallback offline e come fixture di
+test.
+
+## PokéAPI: dopo
+
+PokéAPI non richiede di cambiare il DSL. Richiede un **loader** e un **mapper**:
+
+- `PokemonSource` con due implementazioni: `CsvPokemonSource` e `PokeApiPokemonSource`.
+- `MoveCatalog` con `RegistryMoveCatalog` (le 27 mosse attuali) e `PokeApiMoveCatalog`.
+- Cache su disco delle risposte grezze (JSON), con TTL/ETag; non chiamare l'API a ogni
+  avvio.
+- CSV come fallback offline.
+- Mappare i tipi API su `Element`; per le mosse sconosciute, composizione generica
+  (`FormulaDamage` + effetti base) o skip controllato.
+- Le nuove meccaniche restano nuove implementazioni di `IEffect`/`ICondition`/`INumber`.
+
+Non generare una classe per ogni mossa API: sarebbe l'opposto del design del video.
+
+## Roadmap
+
+### Fase 1 — Fedeltà al video 1 (stimata 1–2 ore)
+
+| # | Correzione | File | Verifica |
+|---|---|---|---|
+| 1 | Scambiare i decoratori in Thunder Wave e Will-O-Wisp: applicabilità fuori, precondizione dentro | `MoveRegistry.java` | Contro un Ground già paralizzato deve apparire "It doesn't affect …", non "But it failed!" |
+| 2 | Esporre il nome in `IMove` (o srotolare i decoratori) e usarlo nel menu | `IMove`, `Move`, `WithPrecondition`, `WithApplicability`, `BattleEngine` | Il menu mostra "Thunder Wave", "Thunderbolt", "Thunder", "Will-O-Wisp" |
+| 3 | Stampare "X used Y!" anche quando fallisce la precondizione/applicabilità | due decoratori | Onix: prima "Pikachu used Thunder Wave!", poi "It doesn't affect Onix!" |
+| 4 | Aggiungere `CrashDamage` e usarlo come `onMiss` di Jump Kick | nuovo `effects/CrashDamage.java`, `MoveRegistry` | Jump Kick che manca: "Machop kept going and crashed!" |
+| 5 | Body Slam: accuratezza 100% (o valore della slide) | `MoveRegistry` | Menu e tiro di accuratezza coerenti |
+| 6 | Combo: animazione per ogni hit e conteggio degli hit realmente applicati | `Combo.java` | Fury Attack contro un Pokémon a pochi HP: il messaggio non dice 5 se ne ha fatti 2 |
+| 7 | (Opzionale) `Leq`/`Geq` come `ICondition<INumber>` o rimozione | `conditions/Leq.java`, `Geq.java` | Compila; nessuna mossa li usa |
+| 8 | (Opzionale) randomizer con seed nel `Battle` | `Battle`, `Weighted`, `Probability`, `FormulaDamage` | Due run con lo stesso seed danno gli stessi risultati |
+
+### Fase 2 — Regole di gioco (stimata 2–4 ore)
+
+| # | Correzione | File | Verifica |
+|---|---|---|---|
+| 9 | Sonno con durata 1–3 turni e messaggio di risveglio | `BattleEngine`, `Sleep` | Dopo N turni il Pokémon si sveglia |
+| 10 | Un solo status maggiore per volta; danno residuo una volta per round, dopo entrambe le azioni, anche se il turno è saltato | `Battler`, `BattleEngine` | Burn + poison non convivono; il danno arriva a fine round |
+| 11 | Toxic con contatore crescente | `Battler`, `BattleEngine` | 1/16, 2/16, 3/16… |
+| 12 | Usare `spAttack`/`spDefense` o rimuoverli | `FormulaDamage`, `Battler`, CSV | Il danno speciale cambia con la statistica giusta, oppure le colonne spariscono |
+| 13 | `Drain` non cura su danno 0; `RestoreHP` non stampa cura a HP pieni | `Drain`, `RestoreHP` | I messaggi corrispondono alla cura reale |
+| 14 | `MoveRegistry.get` fallisce rumorosamente su chiave sconosciuta | `MoveRegistry`, `PokemonLoader` | Un typo nel CSV non diventa Tackle |
+| 15 | Rimuovere o collegare il codice morto | `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`, `flipTurn`, `displayName` | `grep` senza riferimenti inspiegati |
+
+### Fase 3 — Documentazione e verifica (stimata 1 ora)
+
+- Aggiornare le "Fidelity notes" di `CONTEXT.md`: oggi documentano solo 4 scostamenti,
+  l'audit ne ha trovati altri.
+- Aggiungere una checklist manuale di battaglia (menu decorato, fallimento, multi-hit,
+  status, OHKO, vittoria).
+- Non aggiungere JUnit: violerebbe la regola "no new dependencies". Se si vogliono test
+  automatici, va deciso esplicitamente di cambiare quella regola; altrimenti resta il
+  `main` di verifica manuale.
+
+## Cosa non è stato verificato
+
+- Il sonno permanente, il timing del danno residuo, la rampa di Toxic, il conteggio di
+  Combo e i casi limite di Drain/Recover sono verificati **per codice**, non tutti giocati
+  fino in fondo.
+- Non sono state esercitate tutte le 27 mosse né tutte le combinazioni di tipo.
+- Non è stato usato Playwright: non c'è una web UI, la verifica reale è il terminale.
+- I warning di Maven su JDK 27 non sono errori del progetto.
