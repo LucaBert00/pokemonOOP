@@ -10,6 +10,11 @@ Okhravi's *Rebuilding Pokémon with Object Oriented Programming*. The companion 
 the design patterns the DSL accidentally uses. Read [CONTEXT.md](CONTEXT.md) before
 changing the model, and the two transcript files when a behaviour needs its source.
 
+## Workflow
+
+- One issue per session: issue/ticket : session = 1:1. A session resolves exactly one
+  GitHub issue, start to finish, and does not start another.
+
 ## Commands
 
 ```powershell
