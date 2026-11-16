@@ -4,6 +4,9 @@ import com.pokemon.api.IMove;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
 import com.pokemon.conditions.Probability;
+import com.pokemon.moves.Move;
+import com.pokemon.moves.WithApplicability;
+import com.pokemon.moves.WithPrecondition;
 
 import java.util.List;
 import java.util.Scanner;
@@ -114,6 +117,7 @@ public class BattleEngine
         }
 
         Battle battle = new Battle(attacker, defender);
+        System.out.println(attacker.getName() + " used " + moveName(move) + "!");
         move.execute(battle);
 
         // End-of-turn status damage
@@ -248,15 +252,18 @@ public class BattleEngine
 
     private static String moveName(IMove move)
     {
-        if (move instanceof com.pokemon.moves.Move)
+        if (move instanceof Move)
         {
-            return ((com.pokemon.moves.Move) move).getName();
+            return ((Move) move).getName();
         }
-        if (move instanceof com.pokemon.moves.WithPrecondition)
+        if (move instanceof WithPrecondition)
         {
-            // unwrap recursively using reflection-free approach: print class simple name
+            return moveName(((WithPrecondition) move).getWrapped());
         }
-
+        if (move instanceof WithApplicability)
+        {
+            return moveName(((WithApplicability) move).getWrapped());
+        }
         return move.getClass().getSimpleName();
     }
 }

@@ -26,7 +26,6 @@ public class Move implements IMove
     @Override
     public void execute(Battle battle)
     {
-        System.out.println(battle.getAttacker().getName() + " used " + name + "!");
         battle.setCurrentMoveElement(element);
         attempt.execute(battle);
     }

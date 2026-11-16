@@ -23,6 +23,8 @@ public class WithApplicability implements IMove
         this.wrapped   = wrapped;
     }
 
+    public IMove getWrapped() { return wrapped; }
+
     @Override
     public void execute(Battle battle)
     {

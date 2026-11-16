@@ -103,10 +103,10 @@ public class MoveRegistry
         // 6. Thunder Wave  (Chapter 32) — full decorator chain
         //    Precondition: defender not already paralyzed
         //    Applicability: defender is not Ground-type
-        registry.put("ThunderWave", new WithPrecondition(
-            new Not<>(new For(DEF, new IsParalyzed())),
-            new WithApplicability(
-                new Not<>(new HasElement(Element.GROUND)),
+        registry.put("ThunderWave", new WithApplicability(
+            new Not<>(new HasElement(Element.GROUND)),
+            new WithPrecondition(
+                new Not<>(new For(DEF, new IsParalyzed())),
                 new Move(
                     "Thunder Wave", Element.ELECTRIC,
                     new Attempt(
@@ -293,10 +293,10 @@ public class MoveRegistry
         ));
 
         // Will-O-Wisp — applies Burn; fails if defender is already burned or is Fire-type
-        registry.put("WillOWisp", new WithPrecondition(
-                new Not<>(new For(DEF, new IsBurned())),
-                new WithApplicability(
-                        new Not<>(new HasElement(Element.FIRE)),
+        registry.put("WillOWisp", new WithApplicability(
+                new Not<>(new HasElement(Element.FIRE)),
+                new WithPrecondition(
+                        new Not<>(new For(DEF, new IsBurned())),
                         new Move(
                                 "Will-O-Wisp", Element.FIRE,
                                 new Attempt(
@@ -380,18 +380,4 @@ public class MoveRegistry
         return registry.getOrDefault(key, registry.get("Tackle"));
     }
 
-    /** Returns the display name for a move key. */
-
-    public static String displayName(String key)
-    {
-        IMove move = registry.get(key);
-
-        if (move instanceof Move)
-        {
-            return ((Move) move).getName();
-        }
-
-        // For decorated moves, unwrap one level
-        return key; // fallback
-    }
 }
