@@ -83,5 +83,8 @@ is ignored and must never be committed or pushed.
 
 ## Git
 
-Do not commit or push unless explicitly asked. Keep `target/`, `out/`, IDE files and
-`.playwright-mcp/` out of version control.
+- One issue per session: resolve exactly one GitHub issue, then stop.
+- When the issue's implementation and verification are complete, close the GitHub issue
+  before finishing the session.
+- Commit every repository change made for the issue and push it directly to `origin/main`.
+- Keep `target/`, `out/`, IDE files and `.playwright-mcp/` out of version control.
