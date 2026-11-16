@@ -55,7 +55,7 @@ public class BattleEngine
             {
                 executeTurn(player, cpu, playerMove, "  [You] ");
 
-                if (!cpu.isFainted())
+                if (!player.isFainted() && !cpu.isFainted())
                 {
                     executeTurn(cpu, player, cpuMove, "  [CPU] ");
                 }
@@ -64,7 +64,7 @@ public class BattleEngine
             {
                 executeTurn(cpu, player, cpuMove, "  [CPU] ");
 
-                if (!player.isFainted())
+                if (!cpu.isFainted() && !player.isFainted())
                 {
                     executeTurn(player, cpu, playerMove, "  [You] ");
                 }
@@ -121,6 +121,11 @@ public class BattleEngine
         move.execute(battle);
 
         // End-of-turn status damage
+        if (attacker.isFainted())
+        {
+            return;
+        }
+
         if (attacker.isBurned())
         {
             int dmg = Math.max(1, attacker.getMaxHp() / 16);

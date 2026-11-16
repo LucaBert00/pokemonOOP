@@ -78,7 +78,7 @@ public class MoveRegistry
                 "Jump Kick",
                 new Probability<>(0.95),
                 new FormulaDamage(new Exactly(100)),
-                new DirectDamage(ATK,
+                new CrashDamage(ATK,
                     new Product(new MaxHP(ATK), new Exactly(0.5))),
                 new NoEffect()
             )
