@@ -149,40 +149,37 @@ implement the interface they hold.
 
 ## Fidelity notes
 
-Items 1–3 are behaviour differences; item 4 is a place where the code follows an off-hand
-conclusion in the video. All are documented, not fixed.
+### Fase 1 remediation contract
 
-### 1. Decorator order is inverted in Thunder Wave and Will-O-Wisp
+The Fase 1 fidelity and output corrections are implemented and were exercised through
+the terminal battle in issue #14:
 
-The video's object graph at 01:02:43–01:04:46 puts applicability **outside**
-precondition: the Ground-type check runs first, then the "already paralyzed" check.
-`MoveRegistry` builds the reverse for both moves:
+- Decorated move identity is read through the known `IMove` decorator chain, so the menu
+  shows the inner `Move` name. `BattleEngine` prints the used line before execution,
+  including when a decorator rejects the move.
+- Applicability is the outer decorator and precondition is the inner decorator for
+  Thunder Wave and Will-O-Wisp. Applicability therefore has failure precedence when
+  both checks fail.
+- Jump Kick uses the distinct `CrashDamage` effect. On a miss it prints the crash line
+  and applies half of the attacker's maximum HP as self-damage.
+- Body Slam uses 100% accuracy, 85 power, and a separate 30% conditional paralysis
+  effect.
+- Combo performs one accuracy check, prints its animation before each applied hit, and
+  reports the number of applied hits. `lastAttemptHit` remains the single accuracy-roll
+  result.
+- `Leq` and `Geq` intentionally remain `ICondition<Battle>` because `INumber` evaluates
+  with `Battle`; no broader numeric lifting seam was specified.
+- Seeded randomness in `Battle` remains out of scope. Random objects remain composable
+  but are not seedable through the battle context.
 
-```java
-// MoveRegistry.java:106 — Thunder Wave
-new WithPrecondition(                       // checked first
-    new Not<>(new For(DEF, new IsParalyzed())),
-    new WithApplicability(                  // checked second
-        new Not<>(new HasElement(Element.GROUND)),
-        new Move(...)));
-```
+The proof fixtures make the required paths reachable without changing the level-50 stat
+scale or adding a roster row: Machop's `CrossChop` slot is now `JumpKick`, and Gengar's
+`SwordsDance` slot is now `ThunderWave`.
 
-`WillOWisp` at `MoveRegistry.java:296` has the same nesting. Consequence: against a
-Ground-type that is also paralyzed, the player sees `But it failed!` (precondition)
-instead of `It doesn't affect <name>!` (applicability). The fix is to swap the two
-wrappers; it is not applied here because the task was documentation.
+The remaining Fase 2 rules and unrelated cleanup are not part of this issue. The terminal
+battle remains the integration test; there is no JUnit suite.
 
-### 2. Decorated moves lose their name in the menu
-
-`BattleEngine.moveName` (`BattleEngine.java:249`) unwraps only a bare `Move`; anything
-else falls back to `getClass().getSimpleName()`. Thunder Wave therefore appears as
-`WithPrecondition` in the move menu. `MoveRegistry.displayName` (`:385`) was meant to
-solve this but returns the registry key for decorated moves and is never called.
-
-The executed move still prints its real name, because the inner `Move.execute` does the
-printing. Only the selection menu is affected.
-
-### 3. Randomness is not owned by the battle
+### Remaining documented deviation: randomness
 
 The video suggests a seeded randomizer on the battle context (46:10–46:17), so that all
 random objects draw from one predictable source. The code calls `Math.random()` directly
@@ -190,7 +187,7 @@ in `Weighted.evaluate` (`numbers/Weighted.java:34`) and in `FormulaDamage.apply`
 (`effects/FormulaDamage.java:68`). The design is still composable; it is simply not
 seedable.
 
-### 4. `LastDamageDealt` is targetless — as the video concludes
+### `LastDamageDealt` is targetless — as the video concludes
 
 `LastDamageDealt` (`numbers/LastDamageDealt.java`) returns `battle.getLastDamageDealt()`
 without asking *whose* damage. At 49:43 he says it "probably shouldn't take a target. It
@@ -212,8 +209,8 @@ engine or the type chart, while a new *move mechanic* belongs in an `IMove` comp
    `IEffect`, `ICondition` or `INumber` belongs in its package and gets one method.
 4. Avoid null: use `NoEffect` for an empty slot and the one-argument `ConditionalEffect`
    constructor for an empty else-branch.
-5. Decorated moves: check the menu name (known issue above) and the wrapper order
-   (applicability should be outermost when both checks exist).
+5. Decorated moves: the menu name and wrapper order are covered by the Fase 1 remediation
+   contract above.
 
 ## Adding a Pokémon
 

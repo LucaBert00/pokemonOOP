@@ -51,17 +51,17 @@ librerie di Maven/Jansi, non dal progetto.
   `Thunder Wave` nella forma, `Body Slam` nel danno e nella paralisi al 30%,
   `Jump Kick` nella matematica.
 
-### Scostamenti
+### Scostamenti e stato della remediation Fase 1
 
 | # | Scostamento | Tipo | Dettaglio |
 |---|---|---|---|
-| 1 | Ordine dei decoratori invertito in Thunder Wave e Will-O-Wisp | Fedeltà | Il video mette `WithApplicability` **fuori** e `WithPrecondition` dentro. Il codice fa il contrario. Si nota quando falliscono entrambe: contro un Ground già paralizzato il codice dice "But it failed!" invece di "It doesn't affect …". |
-| 2 | Nomi delle mosse decorate nel menu | Bug | Il menu mostra `WithPrecondition` e `WithApplicability` invece di Thunder Wave, Thunderbolt, Thunder, Will-O-Wisp. `BattleEngine.moveName` scompatta solo `Move`; `MoveRegistry.displayName` è morto. |
-| 3 | Manca "X used Y!" quando fallisce precondizione/applicabilità | Bug di output | Verificato contro Onix: il gioco stampa solo "It doesn't affect Onix!", senza "Pikachu used Thunder Wave!". Il `Move` interno non viene eseguito, quindi non stampa la riga. |
-| 4 | Jump Kick non usa `CrashDamage` | Fedeltà | Il video descrive un effetto distinto, con messaggio "kept going and crashed". Il codice usa `DirectDamage`, che stampa "took X direct damage". La matematica è giusta; mancano il tipo e il messaggio. |
-| 5 | Body Slam ha accuratezza 85% | Fedeltà dubbia | Il transcript non dice l'accuratezza di Body Slam. 85% è un valore inventato; per fedeltà va messo 100% o il valore della slide, se verificabile. |
-| 6 | Combo: animazione una volta e conteggio sbagliato | Fedeltà + bug | Il video dice "play the animation, make damage" per **ogni** hit. Il codice stampa l'animazione una volta e stampa il numero di hit tirato, anche se il difensore va KO prima. |
-| 7 | `Leq`/`Geq` hanno il tipo sbagliato | Fedeltà minore | Il video li descrive come `ICondition<INumber>`; il codice li fa `ICondition<Battle>` e valuta il numero dentro `check`. Non sono usati da nessuna mossa. |
+| 1 | Ordine dei decoratori invertito in Thunder Wave e Will-O-Wisp | Corretto in Fase 1 | `WithApplicability` è ora **fuori** e `WithPrecondition` dentro; l'applicabilità prevale quando entrambe falliscono. |
+| 2 | Nomi delle mosse decorate nel menu | Corretto in Fase 1 | Il menu percorre la catena nota dei decoratori e mostra il nome della `Move` interna. |
+| 3 | Manca "X used Y!" quando fallisce precondizione/applicabilità | Corretto in Fase 1 | `BattleEngine` stampa la riga prima di ogni esecuzione, anche per un rifiuto del decoratore. |
+| 4 | Jump Kick non usa `CrashDamage` | Corretto in Fase 1 | Jump Kick usa l'effetto distinto e il messaggio di crash, con autodanno pari a metà degli HP massimi. |
+| 5 | Body Slam ha accuratezza 85% | Corretto in Fase 1 | Body Slam usa accuratezza 100%, potenza 85 e un controllo separato di paralisi al 30%. |
+| 6 | Combo: animazione una volta e conteggio sbagliato | Corretto in Fase 1 | L'animazione precede ogni hit applicato e il conteggio finale riferisce gli hit applicati. |
+| 7 | `Leq`/`Geq` hanno il tipo sbagliato | Disposizione confermata | Restano `ICondition<Battle>` e non sono usati da mosse registrate; nessuna modifica DSL è prevista. |
 | 8 | Random non è nel contesto di battaglia | Fedeltà minore | Il video suggerisce un randomizer con seed nel `Battle`. Il codice chiama `Math.random()` in `Weighted`, `Probability`, `FormulaDamage`, `Main` e `BattleEngine`. Il design resta componibile, ma non è riproducibile. |
 
 Nota su Body Slam: il transcript a un certo punto dice "80%" per la paralisi, ma è un
@@ -89,6 +89,45 @@ usa.
 - Mosse decorate, mosse di stato, cura, drain, multi-hit, OHKO, cambio statistica.
 - Due battaglie reali: Pikachu vs Alakazam (vinta con Thunderbolt) e Pikachu vs Onix
   (persa; Thunder Wave bloccata dall'immunità Ground).
+- Fase 1 verificata nel terminale: menu decorato, righe e ordine dei fallimenti, successo
+  e paralisi di Thunder Wave, immunità Fire di Will-O-Wisp, crash di Jump Kick, animazione
+  e conteggio di Fury Attack, Body Slam a 85 di potenza, Tackle, Triple Kick, vittoria e
+  sconfitta. L'evidenza completa è registrata nel commento all'issue #14.
+
+### Checklist manuale issue #14
+
+Osservato nel terminale durante questa sessione:
+
+1. Menu con `Thunder Wave`, `Thunderbolt`, `Thunder` e `Will-O-Wisp` senza nomi dei
+   decoratori.
+2. Fallimenti decorati: riga `used` prima di una sola riga di fallimento indentata.
+3. Thunder Wave contro Onix: `It doesn't affect Onix!`.
+4. Thunder Wave riuscita e messaggio di paralisi sul difensore non Ground.
+5. Will-O-Wisp contro Charmander: immunità Fire dopo la riga `used`.
+6. Jump Kick mancato: animazione, miss, crash, nessuna riga di danno diretto.
+7. Jump Kick crash fatale: HP dell'attaccante azzerati e risultato immediato.
+8. Fury Attack: animazione prima di ogni hit applicato e conteggio osservato.
+9. Body Slam: nessun miss nella prova, danno della composizione a 85 osservato.
+10. Tackle: miss e hit della composizione 95%/40 osservati.
+11. Triple Kick: tre animazioni, danni separati e vittoria osservati.
+12. Una vittoria completa del giocatore e una sconfitta completa del giocatore.
+
+Non osservato o non verificabile con il terminale e il roster attuali:
+
+1. Thunder Wave contro un difensore contemporaneamente Ground e già paralizzato: non
+   esiste switching né un setup che crei quello stato in una sola battaglia.
+2. Jump Kick crash fatale con azione avversaria pendente e danno residuo da saltare: nel
+   run fatale osservato il CPU aveva già agito e Machop non aveva danno residuo.
+3. Fury Attack con KO anticipato prima del conteggio finale.
+4. Body Slam con il controllo separato di paralisi al 30%.
+5. Output runtime di Leq/Geq: restano non usati da ogni mossa registrata; la disposizione
+   è stata confermata da compilazione e ispezione del contratto, non da una battaglia.
+
+### Fixture di prova approvate
+
+- Machop: sostituzione minima `CrossChop → JumpKick`; nessuna riga o statistica cambia.
+- Gengar: sostituzione minima `SwordsDance → ThunderWave`; nessuna riga o statistica cambia.
+- Le chiavi CSV e il formato a 14 colonne restano invariati.
 
 ### Non funziona (bug del gioco aggiunto)
 
@@ -191,7 +230,7 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 
 ## Roadmap
 
-### Fase 1 — Fedeltà al video 1 (stimata 1–2 ore)
+### Fase 1 — Fedeltà al video 1 (completata)
 
 | # | Correzione | File | Verifica |
 |---|---|---|---|
@@ -202,9 +241,9 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 | 5 | Body Slam: accuratezza 100% (o valore della slide) | `MoveRegistry` | Menu e tiro di accuratezza coerenti |
 | 6 | Combo: animazione per ogni hit e conteggio degli hit realmente applicati | `Combo.java` | Fury Attack contro un Pokémon a pochi HP: il messaggio non dice 5 se ne ha fatti 2 |
 | 7 | (Opzionale) `Leq`/`Geq` come `ICondition<INumber>` o rimozione | `conditions/Leq.java`, `Geq.java` | Compila; nessuna mossa li usa |
-| 8 | (Opzionale) randomizer con seed nel `Battle` | `Battle`, `Weighted`, `Probability`, `FormulaDamage` | Due run con lo stesso seed danno gli stessi risultati |
+| 8 | (Opzionale) randomizer con seed nel `Battle` | `Battle`, `Weighted`, `Probability`, `FormulaDamage` | Fuori scope; resta non seedabile |
 
-### Fase 2 — Regole di gioco (stimata 2–4 ore)
+### Fase 2 — Regole di gioco (fuori scope)
 
 | # | Correzione | File | Verifica |
 |---|---|---|---|
@@ -216,7 +255,7 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 | 14 | `MoveRegistry.get` fallisce rumorosamente su chiave sconosciuta | `MoveRegistry`, `PokemonLoader` | Un typo nel CSV non diventa Tackle |
 | 15 | Rimuovere o collegare il codice morto | `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`, `flipTurn`, `displayName` | `grep` senza riferimenti inspiegati |
 
-### Fase 3 — Documentazione e verifica (stimata 1 ora)
+### Fase 3 — Documentazione e verifica (completata per issue #14)
 
 - Aggiornare le "Fidelity notes" di `CONTEXT.md`: oggi documentano solo 4 scostamenti,
   l'audit ne ha trovati altri.
@@ -228,9 +267,12 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 
 ## Cosa non è stato verificato
 
-- Il sonno permanente, il timing del danno residuo, la rampa di Toxic, il conteggio di
-  Combo e i casi limite di Drain/Recover sono verificati **per codice**, non tutti giocati
-  fino in fondo.
+- Non è stato osservato nel terminale un difensore simultaneamente Ground e già paralizzato:
+  il gioco non offre switching o un setup per creare quello stato in una sola battaglia.
+- Non è stato osservato un crash di Jump Kick che lasci anche un danno residuo da applicare;
+  il caso di crash fatale ha mostrato la fine immediata della battaglia.
+- Leq/Geq non producono output perché restano non usati; la loro disposizione è stata
+  confermata per codice e compilazione, non con una mossa registrata.
 - Non sono state esercitate tutte le 27 mosse né tutte le combinazioni di tipo.
 - Non è stato usato Playwright: non c'è una web UI, la verifica reale è il terminale.
 - I warning di Maven su JDK 27 non sono errori del progetto.

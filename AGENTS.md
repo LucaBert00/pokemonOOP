@@ -67,6 +67,12 @@ Before adding a class, check whether an existing composite already expresses the
 4. Report anything you could not verify. Do not claim a behaviour works because the code
    looks right.
 
+Issue #14 records the completed Fase 1 remediation behaviour, the observed terminal
+evidence, and the two approved proof-fixture substitutions: Machop uses `JumpKick` in
+place of `CrossChop`, and Gengar uses `ThunderWave` in place of `SwordsDance`. The
+terminal battle remains the integration test. Seeded randomness, all Fase 2 rules, and
+unrelated cleanup remain out of scope.
+
 This repository has no web UI, so Playwright is not part of normal verification. If it is
 used (for example to research the videos), its output lives in `.playwright-mcp/`, which
 is ignored and must never be committed or pushed.
