@@ -47,7 +47,7 @@ public class MoveRegistry
             "Body Slam", Element.NORMAL,
             new Attempt(
                 "Body Slam",
-                new Probability<>(0.85),
+                new Probability<>(1.0),
                 new Sequence(
                     new FormulaDamage(new Exactly(85)),
                     new ConditionalEffect(
