@@ -64,8 +64,8 @@ public class FormulaDamage implements IEffect
             System.out.println("  It's not very effective...");
         }
 
-        // Random factor 85–100%
-        damage *= (0.85 + Math.random() * 0.15);
+        // Random factor 85-100%
+        damage *= (0.85 + battle.nextDouble() * 0.15);
 
         int finalDamage = (int) Math.max(1, damage);
         def.takeDamage(finalDamage);

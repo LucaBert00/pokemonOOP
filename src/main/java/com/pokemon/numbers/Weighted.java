@@ -30,14 +30,12 @@ public class Weighted implements INumber
     @Override
     public double evaluate(Battle battle)
     {
-        double total     = entries.stream().mapToDouble(e -> e[1]).sum();
-        double r         = Math.random() * total;
+        double total      = entries.stream().mapToDouble(e -> e[1]).sum();
+        double r          = battle.nextDouble() * total;
         double cumulative = 0;
-
         for (double[] entry : entries)
         {
             cumulative += entry[1];
-
             if (r < cumulative)
             {
                 return entry[0];

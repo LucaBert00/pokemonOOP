@@ -7,8 +7,9 @@ import com.pokemon.conditions.Probability;
 import com.pokemon.moves.Move;
 import com.pokemon.moves.WithApplicability;
 import com.pokemon.moves.WithPrecondition;
-
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 import java.util.Scanner;
 
 /**
@@ -21,12 +22,24 @@ public class BattleEngine
     private final Battler player;
     private final Battler cpu;
     private final Scanner scanner;
+    private final Random  random;
 
     public BattleEngine(Battler player, Battler cpu, Scanner scanner)
+    {
+        this(player, cpu, scanner, new Random());
+    }
+
+    public BattleEngine(Battler player, Battler cpu, Scanner scanner, long seed)
+    {
+        this(player, cpu, scanner, new Random(seed));
+    }
+
+    public BattleEngine(Battler player, Battler cpu, Scanner scanner, Random random)
     {
         this.player  = player;
         this.cpu     = cpu;
         this.scanner = scanner;
+        this.random  = Objects.requireNonNull(random, "random must not be null");
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
@@ -79,6 +92,7 @@ public class BattleEngine
     private void executeTurn(Battler attacker, Battler defender, IMove move, String prefix)
     {
         System.out.println();
+        Battle battle = new Battle(attacker, defender, random);
 
         // Sleep check — skip turn; flag cleared when it wears off (external cure)
         if (attacker.isAsleep())
@@ -90,8 +104,7 @@ public class BattleEngine
         // Freeze check — 20% chance to thaw each turn, otherwise skip
         if (attacker.isFrozen())
         {
-            boolean thawed = new Probability<>(0.20).check(new Battle(attacker, defender));
-
+            boolean thawed = new Probability<>(0.20).check(battle);
             if (thawed)
             {
                 attacker.setFrozen(false);
@@ -107,8 +120,7 @@ public class BattleEngine
         // Paralysis check — 25% chance to be fully paralyzed
         if (attacker.isParalyzed())
         {
-            boolean cantMove = new Probability<>(0.25).check(new Battle(attacker, defender));
-
+            boolean cantMove = new Probability<>(0.25).check(battle);
             if (cantMove)
             {
                 System.out.println(prefix + attacker.getName() + " is paralyzed and can't move!");
@@ -116,7 +128,6 @@ public class BattleEngine
             }
         }
 
-        Battle battle = new Battle(attacker, defender);
         System.out.println(attacker.getName() + " used " + moveName(move) + "!");
         move.execute(battle);
 
@@ -152,7 +163,7 @@ public class BattleEngine
     // ── CPU AI (random) ───────────────────────────────────────────────────────
     private IMove pickCpuMove(List<IMove> moves)
     {
-        return moves.get((int) (Math.random() * moves.size()));
+        return moves.get(random.nextInt(moves.size()));
     }
 
     // ── Player move prompt ────────────────────────────────────────────────────

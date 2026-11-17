@@ -18,9 +18,11 @@ changing the model, and the two transcript files when a behaviour needs its sour
 ## Commands
 
 ```powershell
-mvn -q compile                                  # fast check
-mvn -q clean package                            # build the executable JAR
-java -jar target/PokemonOOP-1.0-SNAPSHOT.jar    # play (Java 27+)
+mvn -q compile                                            # fast check
+mvn test                                                  # run JUnit 5 test suite
+mvn -q clean package                                      # build the executable JAR
+java -jar target/PokemonOOP-1.0-SNAPSHOT.jar              # play (Java 27+)
+java -jar target/PokemonOOP-1.0-SNAPSHOT.jar --seed 42    # deterministic battle
 ```
 
 If `java` on `PATH` is older than 27, use the JDK Maven used:
@@ -31,7 +33,9 @@ run it, pick a Pokémon, pick moves, watch the output.
 
 ## Non-negotiables
 
-- **Java 27, no new dependencies.** The `pom.xml` has none and should stay that way.
+- **Java 27, zero runtime dependencies.** Production code (`src/main/java/`) and the packaged 
+  JAR have zero external dependencies; `test`-scoped JUnit 5 (`org.junit.jupiter:junit-jupiter`) 
+  in `pom.xml` is standard for automated verification.
 - **The DSL is the design.** `com.pokemon.api` defines six interfaces; variation is a new
   implementation or a new composition, never a branch on a move name, type or string.
 - **`Move` stays data.** It holds name, element and attempt, delegates, and prints its
@@ -60,18 +64,17 @@ Before adding a class, check whether an existing composite already expresses the
 
 ## Verification
 
-1. `mvn -q compile` must pass.
-2. Build and run the JAR. Drive a full turn: choose a Pokémon, choose a move, read the
-   output. For a decorated move, confirm the menu name and the failure message.
+1. `mvn test` and `mvn -q compile` must pass.
+2. Build and run the JAR (optionally with `--seed <long>`). Drive a full turn: choose a Pokémon, 
+   choose a move, read the output. For a decorated move, confirm the menu name and the failure message.
 3. If a change touches damage, status or turn order, play until a faint.
 4. Report anything you could not verify. Do not claim a behaviour works because the code
    looks right.
 
-Issue #14 records the completed Fase 1 remediation behaviour, the observed terminal
-evidence, and the two approved proof-fixture substitutions: Machop uses `JumpKick` in
-place of `CrossChop`, and Gengar uses `ThunderWave` in place of `SwordsDance`. The
-terminal battle remains the integration test. Seeded randomness, all Fase 2 rules, and
-unrelated cleanup remain out of scope.
+Issue #14 records the completed Fase 1 remediation behaviour, the observed terminal evidence, 
+and the two approved proof-fixture substitutions: Machop uses `JumpKick` in place of `CrossChop`, 
+and Gengar uses `ThunderWave` in place of `SwordsDance`. Issue #16 introduces `Battle`-owned 
+seeded randomness and the `test`-scoped JUnit 5 harness.
 
 This repository has no web UI, so Playwright is not part of normal verification. If it is
 used (for example to research the videos), its output lives in `.playwright-mcp/`, which
