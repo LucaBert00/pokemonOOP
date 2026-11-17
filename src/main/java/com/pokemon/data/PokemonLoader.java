@@ -81,13 +81,20 @@ public class PokemonLoader
                 elements.add(Element.valueOf(p[2].trim().toUpperCase()));
             }
 
-            int maxHp     = Integer.parseInt(p[3].trim());
-            int level     = Integer.parseInt(p[4].trim());
-            int attack    = Integer.parseInt(p[5].trim());
-            int defense   = Integer.parseInt(p[6].trim());
-            int spAttack  = Integer.parseInt(p[7].trim());
-            int spDefense = Integer.parseInt(p[8].trim());
-            int speed     = Integer.parseInt(p[9].trim());
+            int baseHp      = Integer.parseInt(p[3].trim());
+            int level       = Integer.parseInt(p[4].trim());
+            int baseAttack  = Integer.parseInt(p[5].trim());
+            int baseDefense = Integer.parseInt(p[6].trim());
+            int baseSpAttack  = Integer.parseInt(p[7].trim());
+            int baseSpDefense = Integer.parseInt(p[8].trim());
+            int baseSpeed   = Integer.parseInt(p[9].trim());
+
+            int maxHp     = scaleHp(baseHp, level);
+            int attack    = scaleStat(baseAttack, level);
+            int defense   = scaleStat(baseDefense, level);
+            int spAttack  = scaleStat(baseSpAttack, level);
+            int spDefense = scaleStat(baseSpDefense, level);
+            int speed     = scaleStat(baseSpeed, level);
 
             List<IMove> moves = new ArrayList<>();
 
@@ -109,5 +116,15 @@ public class PokemonLoader
             System.err.println("[PokemonLoader] Parse error: " + e.getMessage());
             return null;
         }
+    }
+
+    static int scaleHp(int baseHp, int level)
+    {
+        return (2 * baseHp * level) / 100 + level + 10;
+    }
+
+    static int scaleStat(int baseStat, int level)
+    {
+        return (2 * baseStat * level) / 100 + 5;
     }
 }
