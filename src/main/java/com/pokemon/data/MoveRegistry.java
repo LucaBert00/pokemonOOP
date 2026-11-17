@@ -38,7 +38,7 @@ public class MoveRegistry
             new Attempt(
                 "Tackle",
                 new Probability<>(0.95),
-                new FormulaDamage(new Exactly(40))
+                new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -49,7 +49,7 @@ public class MoveRegistry
                 "Body Slam",
                 new Probability<>(1.0),
                 new Sequence(
-                    new FormulaDamage(new Exactly(85)),
+                    new FormulaDamage(new Exactly(85), MoveCategory.PHYSICAL),
                     new ConditionalEffect(
                         new Probability<>(0.30),
                         new Paralysis(DEF)
@@ -63,11 +63,11 @@ public class MoveRegistry
             "Triple Kick", Element.FIGHTING,
             new Cascade(
                 new Attempt("Kick", new Probability<>(0.90),
-                    new FormulaDamage(new Exactly(10))),
+                    new FormulaDamage(new Exactly(10), MoveCategory.PHYSICAL)),
                 new Attempt("Kick", new Probability<>(0.90),
-                    new FormulaDamage(new Exactly(20))),
+                    new FormulaDamage(new Exactly(20), MoveCategory.PHYSICAL)),
                 new Attempt("Kick", new Probability<>(0.90),
-                    new FormulaDamage(new Exactly(30)))
+                    new FormulaDamage(new Exactly(30), MoveCategory.PHYSICAL))
             )
         ));
 
@@ -77,7 +77,7 @@ public class MoveRegistry
             new Attempt(
                 "Jump Kick",
                 new Probability<>(0.95),
-                new FormulaDamage(new Exactly(100)),
+                new FormulaDamage(new Exactly(100), MoveCategory.PHYSICAL),
                 new CrashDamage(ATK,
                     new Product(new MaxHP(ATK), new Exactly(0.5))),
                 new NoEffect()
@@ -96,7 +96,7 @@ public class MoveRegistry
                     new double[]{4, 0.125},
                     new double[]{5, 0.125}
                 ),
-                new FormulaDamage(new Exactly(15))
+                new FormulaDamage(new Exactly(15), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -127,7 +127,7 @@ public class MoveRegistry
             new Attempt(
                 "Ember",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(40))
+                new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL)
             )
         ));
 
@@ -136,7 +136,7 @@ public class MoveRegistry
             new Attempt(
                 "Flamethrower",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(90))
+                new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL)
             )
         ));
 
@@ -145,7 +145,7 @@ public class MoveRegistry
             new Attempt(
                 "Water Gun",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(40))
+                new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL)
             )
         ));
 
@@ -154,7 +154,7 @@ public class MoveRegistry
             new Attempt(
                 "Surf",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(90))
+                new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL)
             )
         ));
 
@@ -166,7 +166,7 @@ public class MoveRegistry
                     "Thunderbolt",
                     new Probability<>(1.0),
                     new Sequence(
-                        new FormulaDamage(new Exactly(90)),
+                        new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                         new ConditionalEffect(
                             new Probability<>(0.10),
                             new Paralysis(DEF)
@@ -184,7 +184,7 @@ public class MoveRegistry
                     "Thunder",
                     new Probability<>(0.70),
                     new Sequence(
-                        new FormulaDamage(new Exactly(110)),
+                        new FormulaDamage(new Exactly(110), MoveCategory.SPECIAL),
                         new ConditionalEffect(
                             new Probability<>(0.30),
                             new Paralysis(DEF)
@@ -199,7 +199,7 @@ public class MoveRegistry
             new Attempt(
                 "Vine Whip",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(45))
+                new FormulaDamage(new Exactly(45), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -210,7 +210,7 @@ public class MoveRegistry
                 "Mega Drain",
                 new Probability<>(1.0),
                 new Sequence(
-                    new FormulaDamage(new Exactly(40)),
+                    new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL),
                     new Drain(ATK, new Exactly(0.5))
                 )
             )
@@ -221,7 +221,7 @@ public class MoveRegistry
             new Attempt(
                 "Scratch",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(40))
+                new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -230,7 +230,7 @@ public class MoveRegistry
             new Attempt(
                 "Quick Attack",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(40))
+                new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -239,7 +239,7 @@ public class MoveRegistry
             new Attempt(
                 "Rock Throw",
                 new Probability<>(0.90),
-                new FormulaDamage(new Exactly(50))
+                new FormulaDamage(new Exactly(50), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -248,7 +248,7 @@ public class MoveRegistry
             new Attempt(
                 "Karate Chop",
                 new Probability<>(1.0),
-                new FormulaDamage(new Exactly(50))
+                new FormulaDamage(new Exactly(50), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -257,7 +257,7 @@ public class MoveRegistry
             new Attempt(
                 "Cross Chop",
                 new Probability<>(0.80),
-                new FormulaDamage(new Exactly(100))
+                new FormulaDamage(new Exactly(100), MoveCategory.PHYSICAL)
             )
         ));
 
@@ -347,7 +347,7 @@ public class MoveRegistry
                         "Ice Beam",
                         new Probability<>(1.0),
                         new Sequence(
-                                new FormulaDamage(new Exactly(90)),
+                                new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                                 new ConditionalEffect(
                                         new Probability<>(0.10),
                                         new Freeze(DEF)
@@ -363,7 +363,7 @@ public class MoveRegistry
                         "Sludge Bomb",
                         new Probability<>(1.0),
                         new Sequence(
-                                new FormulaDamage(new Exactly(90)),
+                                new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                                 new ConditionalEffect(
                                         new Probability<>(0.30),
                                         new Poison(DEF)
