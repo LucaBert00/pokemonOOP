@@ -4,6 +4,7 @@ import com.pokemon.api.IEffect;
 import com.pokemon.api.ITarget;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.MajorStatus;
 
 /** Applies the sleep status condition to the target. */
 
@@ -19,15 +20,14 @@ public class Sleep implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler t = target.resolve(battle);
-        if (!t.isAsleep())
+        Battler targetBattler = target.resolve(battle);
+        if (!targetBattler.applyMajorStatus(MajorStatus.ASLEEP))
         {
-            t.setAsleep(true);
-            System.out.println("  " + t.getName() + " fell asleep!");
+            System.out.println("  " + targetBattler.getName() + " is already affected by a major status!");
+            return;
         }
-        else
-        {
-            System.out.println("  " + t.getName() + " is already asleep!");
-        }
+        int turns = battle.getRandom().nextInt(3) + 1;
+        targetBattler.setSleepTurnsRemaining(turns);
+        System.out.println("  " + targetBattler.getName() + " fell asleep!");
     }
 }

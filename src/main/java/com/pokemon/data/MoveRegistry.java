@@ -25,6 +25,8 @@ public class MoveRegistry
 {
     private static final Attacker ATK = new Attacker();
     private static final Defender DEF = new Defender();
+    private static final String   STATUS_PRECONDITION_FAILED =
+        "  But it failed! Target is already affected by a major status.";
 
     private static final Map<String, IMove> registry = new HashMap<>();
 
@@ -106,7 +108,7 @@ public class MoveRegistry
         registry.put("ThunderWave", new WithApplicability(
             new Not<>(new HasElement(Element.GROUND)),
             new WithPrecondition(
-                new Not<>(new For(DEF, new IsParalyzed())),
+                new Not<>(new For(DEF, new HasMajorStatus())),
                 new Move(
                     "Thunder Wave", Element.ELECTRIC,
                     new Attempt(
@@ -116,7 +118,8 @@ public class MoveRegistry
                         new NoEffect(),
                         new NoEffect()
                     )
-                )
+                ),
+                STATUS_PRECONDITION_FAILED
             )
         ));
 
@@ -292,11 +295,11 @@ public class MoveRegistry
             )
         ));
 
-        // Will-O-Wisp — applies Burn; fails if defender is already burned or is Fire-type
+        // Will-O-Wisp — applies Burn; fails if defender is already affected or is Fire-type
         registry.put("WillOWisp", new WithApplicability(
                 new Not<>(new HasElement(Element.FIRE)),
                 new WithPrecondition(
-                        new Not<>(new For(DEF, new IsBurned())),
+                        new Not<>(new For(DEF, new HasMajorStatus())),
                         new Move(
                                 "Will-O-Wisp", Element.FIRE,
                                 new Attempt(
@@ -306,13 +309,14 @@ public class MoveRegistry
                                         new NoEffect(),
                                         new NoEffect()
                                 )
-                        )
+                        ),
+                        STATUS_PRECONDITION_FAILED
                 )
         ));
 
-        // Toxic — badly poisons the defender; fails if already badly poisoned
+        // Toxic — badly poisons the defender; fails if already affected
         registry.put("Toxic", new WithPrecondition(
-                new Not<>(new For(DEF, new IsBadlyPoisoned())),
+                new Not<>(new For(DEF, new HasMajorStatus())),
                 new Move(
                         "Toxic", Element.POISON,
                         new Attempt(
@@ -322,12 +326,13 @@ public class MoveRegistry
                                 new NoEffect(),
                                 new NoEffect()
                         )
-                )
+                ),
+                STATUS_PRECONDITION_FAILED
         ));
 
-        // Spore — puts the defender to sleep; fails if already asleep
+        // Spore — puts the defender to sleep; fails if already affected
         registry.put("Spore", new WithPrecondition(
-                new Not<>(new For(DEF, new IsAsleep())),
+                new Not<>(new For(DEF, new HasMajorStatus())),
                 new Move(
                         "Spore", Element.GRASS,
                         new Attempt(
@@ -337,7 +342,8 @@ public class MoveRegistry
                                 new NoEffect(),
                                 new NoEffect()
                         )
-                )
+                ),
+                STATUS_PRECONDITION_FAILED
         ));
 
         // Ice Beam — 90 damage + 10% chance to freeze

@@ -4,6 +4,7 @@ import com.pokemon.api.IEffect;
 import com.pokemon.api.ITarget;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.MajorStatus;
 
 /** Applies the badly poisoned (Toxic) status condition to the target. */
 
@@ -19,15 +20,12 @@ public class BadlyPoison implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler t = target.resolve(battle);
-        if (!t.isBadlyPoisoned())
+        Battler targetBattler = target.resolve(battle);
+        if (!targetBattler.applyMajorStatus(MajorStatus.BADLY_POISONED))
         {
-            t.setBadlyPoisoned(true);
-            System.out.println("  " + t.getName() + " was badly poisoned!");
+            System.out.println("  " + targetBattler.getName() + " is already affected by a major status!");
+            return;
         }
-        else
-        {
-            System.out.println("  " + t.getName() + " is already badly poisoned!");
-        }
+        System.out.println("  " + targetBattler.getName() + " was badly poisoned!");
     }
 }

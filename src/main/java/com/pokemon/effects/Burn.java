@@ -4,6 +4,7 @@ import com.pokemon.api.IEffect;
 import com.pokemon.api.ITarget;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.MajorStatus;
 
 /** Applies the burn status condition to the target. */
 
@@ -19,15 +20,12 @@ public class Burn implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler t = target.resolve(battle);
-        if (!t.isBurned())
+        Battler targetBattler = target.resolve(battle);
+        if (!targetBattler.applyMajorStatus(MajorStatus.BURNED))
         {
-            t.setBurned(true);
-            System.out.println("  " + t.getName() + " was burned!");
+            System.out.println("  " + targetBattler.getName() + " is already affected by a major status!");
+            return;
         }
-        else
-        {
-            System.out.println("  " + t.getName() + " is already burned!");
-        }
+        System.out.println("  " + targetBattler.getName() + " was burned!");
     }
 }

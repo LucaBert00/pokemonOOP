@@ -4,6 +4,7 @@ import com.pokemon.api.IMove;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a Pokémon in battle.
@@ -27,12 +28,8 @@ public class Battler
     private final int speed;
 
     // ── Status ────────────────────────────────────────────────────────────────
-    private boolean paralyzed;
-    private boolean burned;
-    private boolean frozen;
-    private boolean poisoned;
-    private boolean badlyPoisoned;
-    private boolean asleep;
+    private MajorStatus majorStatus = MajorStatus.NONE;
+    private int sleepTurnsRemaining = 0;
 
     // ── Moves ─────────────────────────────────────────────────────────────────
     private final List<IMove> moves;
@@ -53,12 +50,6 @@ public class Battler
         this.spDefense      = spDefense;
         this.speed          = speed;
         this.moves          = new ArrayList<>(moves);
-        this.paralyzed      = false;
-        this.burned         = false;
-        this.frozen         = false;
-        this.poisoned       = false;
-        this.badlyPoisoned  = false;
-        this.asleep         = false;
     }
 
     // ── Combat helpers ────────────────────────────────────────────────────────
@@ -94,18 +85,70 @@ public class Battler
     public int           getSpAttack()                  { return spAttack; }
     public int           getSpDefense()                 { return spDefense; }
     public int           getSpeed()                     { return speed; }
-    public boolean       isParalyzed()                  { return paralyzed; }
-    public void          setParalyzed(boolean v)        { paralyzed = v; }
-    public boolean       isBurned()                     { return burned; }
-    public void          setBurned(boolean v)           { burned = v; }
-    public boolean       isFrozen()                     { return frozen; }
-    public void          setFrozen(boolean v)           { frozen = v; }
-    public boolean       isPoisoned()                   { return poisoned; }
-    public void          setPoisoned(boolean v)         { poisoned = v; }
-    public boolean       isBadlyPoisoned()              { return badlyPoisoned; }
-    public void          setBadlyPoisoned(boolean v)    { badlyPoisoned = v; }
-    public boolean       isAsleep()                     { return asleep; }
-    public void          setAsleep(boolean v)           { asleep = v; }
+
+    // ── Major status (mutually exclusive) ──
+    public MajorStatus getMajorStatus()
+    {
+        return majorStatus;
+    }
+
+    public boolean hasMajorStatus()
+    {
+        return majorStatus.isActive();
+    }
+
+    /**
+     * Applies {@code status} only if this battler has no active major status.
+     * Refuses to overwrite an existing status (no-op, returns {@code false}).
+     */
+    public boolean applyMajorStatus(MajorStatus status)
+    {
+        Objects.requireNonNull(status, "status must not be null");
+        if (status == MajorStatus.NONE || hasMajorStatus())
+        {
+            return false;
+        }
+        this.majorStatus = status;
+        return true;
+    }
+
+    /** Clears any active major status (e.g. on wake or thaw) and resets sleep turns. */
+    public void clearMajorStatus()
+    {
+        this.majorStatus = MajorStatus.NONE;
+        this.sleepTurnsRemaining = 0;
+    }
+
+    public boolean isParalyzed()     { return majorStatus == MajorStatus.PARALYZED; }
+    public boolean isBurned()        { return majorStatus == MajorStatus.BURNED; }
+    public boolean isFrozen()        { return majorStatus == MajorStatus.FROZEN; }
+    public boolean isPoisoned()      { return majorStatus == MajorStatus.POISONED; }
+    public boolean isBadlyPoisoned() { return majorStatus == MajorStatus.BADLY_POISONED; }
+    public boolean isAsleep()        { return majorStatus == MajorStatus.ASLEEP; }
+
+    // ── Sleep duration tracking ──
+    public int getSleepTurnsRemaining()
+    {
+        return sleepTurnsRemaining;
+    }
+
+    public void setSleepTurnsRemaining(int turns)
+    {
+        if (turns < 0)
+        {
+            throw new IllegalArgumentException("sleepTurnsRemaining must be >= 0, got " + turns);
+        }
+        this.sleepTurnsRemaining = turns;
+    }
+
+    public void decrementSleepTurns()
+    {
+        if (sleepTurnsRemaining > 0)
+        {
+            sleepTurnsRemaining--;
+        }
+    }
+
     public List<IMove>   getMoves()                     { return moves; }
 
     /** Visual HP bar for terminal display. */

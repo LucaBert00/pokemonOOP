@@ -4,6 +4,7 @@ import com.pokemon.api.IEffect;
 import com.pokemon.api.ITarget;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.MajorStatus;
 
 /** Applies the paralysis status condition to the target. */
 
@@ -19,15 +20,12 @@ public class Paralysis implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler t = target.resolve(battle);
-        if (!t.isParalyzed())
+        Battler targetBattler = target.resolve(battle);
+        if (!targetBattler.applyMajorStatus(MajorStatus.PARALYZED))
         {
-            t.setParalyzed(true);
-            System.out.println("  " + t.getName() + " is paralyzed! It may be unable to move!");
+            System.out.println("  " + targetBattler.getName() + " is already affected by a major status!");
+            return;
         }
-        else
-        {
-            System.out.println("  " + t.getName() + " is already paralyzed!");
-        }
+        System.out.println("  " + targetBattler.getName() + " was paralyzed!");
     }
 }

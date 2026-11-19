@@ -94,11 +94,17 @@ public class BattleEngine
         System.out.println();
         Battle battle = new Battle(attacker, defender, random);
 
-        // Sleep check — skip turn; flag cleared when it wears off (external cure)
+        // Sleep check — decrements remaining turns; wakes and acts at 0
         if (attacker.isAsleep())
         {
-            System.out.println(prefix + attacker.getName() + " is fast asleep!");
-            return;
+            if (attacker.getSleepTurnsRemaining() > 0)
+            {
+                attacker.decrementSleepTurns();
+                System.out.println(prefix + attacker.getName() + " is fast asleep!");
+                return;
+            }
+            attacker.clearMajorStatus();
+            System.out.println(prefix + attacker.getName() + " woke up!");
         }
 
         // Freeze check — 20% chance to thaw each turn, otherwise skip
@@ -107,7 +113,7 @@ public class BattleEngine
             boolean thawed = new Probability<>(0.20).check(battle);
             if (thawed)
             {
-                attacker.setFrozen(false);
+                attacker.clearMajorStatus();
                 System.out.println(prefix + attacker.getName() + " thawed out!");
             }
             else

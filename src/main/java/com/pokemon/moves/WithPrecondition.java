@@ -6,7 +6,7 @@ import com.pokemon.battle.Battle;
 
 /**
  * Decorator that checks a battle-level condition BEFORE delegating.
- * Failure message: "But it failed!"
+ * Failure message defaults to "But it failed!".
  *
  * Example: Thunder Wave — defender must not already be paralyzed.
  */
@@ -15,11 +15,18 @@ public class WithPrecondition implements IMove
 {
     private final ICondition<Battle> condition;
     private final IMove              wrapped;
+    private final String             failureMessage;
 
     public WithPrecondition(ICondition<Battle> condition, IMove wrapped)
     {
-        this.condition = condition;
-        this.wrapped   = wrapped;
+        this(condition, wrapped, "  But it failed!");
+    }
+
+    public WithPrecondition(ICondition<Battle> condition, IMove wrapped, String failureMessage)
+    {
+        this.condition      = condition;
+        this.wrapped        = wrapped;
+        this.failureMessage = failureMessage;
     }
 
     public IMove getWrapped() { return wrapped; }
@@ -33,7 +40,7 @@ public class WithPrecondition implements IMove
         }
         else
         {
-            System.out.println("  But it failed!");
+            System.out.println(failureMessage);
         }
     }
 }
