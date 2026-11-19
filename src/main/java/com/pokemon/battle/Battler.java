@@ -30,6 +30,7 @@ public class Battler
     // ── Status ────────────────────────────────────────────────────────────────
     private MajorStatus majorStatus = MajorStatus.NONE;
     private int sleepTurnsRemaining = 0;
+    private int toxicCounter = 0;
 
     // ── Moves ─────────────────────────────────────────────────────────────────
     private final List<IMove> moves;
@@ -118,6 +119,10 @@ public class Battler
             return false;
         }
         this.majorStatus = status;
+        if (status == MajorStatus.BADLY_POISONED)
+        {
+            this.toxicCounter = 1;
+        }
         return true;
     }
 
@@ -126,6 +131,7 @@ public class Battler
     {
         this.majorStatus = MajorStatus.NONE;
         this.sleepTurnsRemaining = 0;
+        this.toxicCounter = 0;
     }
 
     public boolean isParalyzed()     { return majorStatus == MajorStatus.PARALYZED; }
@@ -156,6 +162,17 @@ public class Battler
         {
             sleepTurnsRemaining--;
         }
+    }
+
+    // ── Toxic ramp counter ──
+    public int getToxicCounter()
+    {
+        return toxicCounter;
+    }
+
+    public void incrementToxicCounter()
+    {
+        toxicCounter++;
     }
 
     public List<IMove>   getMoves()                     { return moves; }

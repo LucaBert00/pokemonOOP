@@ -75,6 +75,12 @@ public class BattleEngine
                 executeHalfTurn(battle, plan.secondMove());
             }
 
+            // Residual damage ticks only while the battle is undecided; a KO ends the round.
+            if (!player.isFainted() && !cpu.isFainted())
+            {
+                applyEndOfRoundDamage();
+            }
+
             printStatus();
             turnNumber++;
         }
@@ -86,7 +92,6 @@ public class BattleEngine
     private void executeHalfTurn(Battle battle, IMove move)
     {
         Battler attacker = battle.getAttacker();
-        Battler defender = battle.getDefender();
         System.out.println();
 
         // Sleep check — decrements remaining turns; wakes and acts at 0
@@ -131,33 +136,41 @@ public class BattleEngine
 
         System.out.println(attacker.getName() + " used " + moveName(move) + "!");
         move.execute(battle);
+    }
 
-        // End-of-turn status damage
-        if (attacker.isFainted())
+    // ── End-of-round residual status damage ───────────────────────────────────
+    private void applyEndOfRoundDamage()
+    {
+        if (!player.isFainted())
         {
-            return;
+            applyResidualDamage(player);
         }
-
-        if (attacker.isBurned())
+        if (!cpu.isFainted())
         {
-            int dmg = Math.max(1, attacker.getMaxHp() / 16);
-            attacker.takeDamage(dmg);
-
-            System.out.println(attacker.getName() + " is hurt by its burn! (-" + dmg + " HP)");
+            applyResidualDamage(cpu);
         }
-        else if (attacker.isPoisoned())
-        {
-            int dmg = Math.max(1, attacker.getMaxHp() / 8);
-            attacker.takeDamage(dmg);
+    }
 
-            System.out.println(attacker.getName() + " is hurt by poison! (-" + dmg + " HP)");
+    private void applyResidualDamage(Battler battler)
+    {
+        if (battler.isBurned())
+        {
+            int dmg = Math.max(1, battler.getMaxHp() / 16);
+            battler.takeDamage(dmg);
+            System.out.println(battler.getName() + " is hurt by its burn! (-" + dmg + " HP)");
         }
-        else if (attacker.isBadlyPoisoned())
+        else if (battler.isPoisoned())
         {
-            int dmg = Math.max(1, attacker.getMaxHp() / 16);
-            attacker.takeDamage(dmg);
-
-            System.out.println(attacker.getName() + " is badly hurt by poison! (-" + dmg + " HP)");
+            int dmg = Math.max(1, battler.getMaxHp() / 16);
+            battler.takeDamage(dmg);
+            System.out.println(battler.getName() + " is hurt by poison! (-" + dmg + " HP)");
+        }
+        else if (battler.isBadlyPoisoned())
+        {
+            int dmg = Math.max(1, battler.getMaxHp() * battler.getToxicCounter() / 16);
+            battler.takeDamage(dmg);
+            battler.incrementToxicCounter();
+            System.out.println(battler.getName() + " is badly hurt by poison! (-" + dmg + " HP)");
         }
     }
 
