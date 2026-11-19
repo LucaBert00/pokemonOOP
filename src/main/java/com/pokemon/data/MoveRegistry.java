@@ -380,11 +380,19 @@ public class MoveRegistry
         ));
     }
 
-    /** Returns the IMove for the given key, or Tackle as fallback. */
-
+    /**
+     * Returns the {@link IMove} registered under {@code key}.
+     *
+     * @throws IllegalArgumentException if {@code key} is not registered
+     */
     public static IMove get(String key)
     {
-        return registry.getOrDefault(key, registry.get("Tackle"));
+        IMove move = registry.get(key);
+        if (move == null)
+        {
+            throw new IllegalArgumentException("Unknown move: " + key);
+        }
+        return move;
     }
 
 }
