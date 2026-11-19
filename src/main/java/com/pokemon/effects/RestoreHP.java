@@ -22,9 +22,16 @@ public class RestoreHP implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler t    = target.resolve(battle);
-        int     heal = (int) Math.max(1, amount.evaluate(battle));
-        t.restoreHp(heal);
-        System.out.printf("  %s recovered %d HP!%n", t.getName(), heal);
+        Battler beneficiary = target.resolve(battle);
+        int requested = (int) amount.evaluate(battle);
+        int missingHp = beneficiary.getMaxHp() - beneficiary.getCurrentHp();
+        int actual = Math.min(missingHp, requested);
+        if (actual <= 0)
+        {
+            System.out.println("  " + beneficiary.getName() + "'s HP is already full!");
+            return;
+        }
+        beneficiary.restoreHp(actual);
+        System.out.println("  " + beneficiary.getName() + " recovered " + actual + " HP!");
     }
 }

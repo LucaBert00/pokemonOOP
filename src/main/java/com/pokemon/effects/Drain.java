@@ -27,9 +27,24 @@ public class Drain implements IEffect
     @Override
     public void apply(Battle battle)
     {
-        Battler healed = target.resolve(battle);
-        int     heal   = (int) Math.max(1, battle.getLastDamageDealt() * fraction.evaluate(battle));
-        healed.restoreHp(heal);
-        System.out.printf("  %s absorbed %d HP!%n", healed.getName(), heal);
+        double dealt = battle.getLastDamageDealt();
+        if (dealt <= 0)
+        {
+            return;
+        }
+        Battler beneficiary = target.resolve(battle);
+        int missingHp = beneficiary.getMaxHp() - beneficiary.getCurrentHp();
+        if (missingHp <= 0)
+        {
+            return;
+        }
+        int requested = Math.max(1, (int) Math.floor(dealt * fraction.evaluate(battle)));
+        int actual = Math.min(missingHp, requested);
+        if (actual <= 0)
+        {
+            return;
+        }
+        beneficiary.restoreHp(actual);
+        System.out.println("  " + beneficiary.getName() + " absorbed " + actual + " HP!");
     }
 }
