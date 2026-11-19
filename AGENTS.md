@@ -95,5 +95,6 @@ is ignored and must never be committed or pushed.
 - One issue per session: resolve exactly one GitHub issue, then stop.
 - When the issue's implementation and verification are complete, close the GitHub issue
   before finishing the session.
-- Commit every repository change made for the issue and push it directly to `origin/main`.
+- Commit in focused slices and push directly to `origin/main`. Multiple commits and pushes per issue are allowed and preferred when the work is long; a single commit is fine for a small change.
+- Keep `origin/main` green after every push: if you commit a failing Red test, push it together with the fix that makes it pass.
 - Keep `target/`, `out/`, IDE files and `.playwright-mcp/` out of version control.
