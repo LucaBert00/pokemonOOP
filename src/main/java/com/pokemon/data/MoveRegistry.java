@@ -378,6 +378,75 @@ public class MoveRegistry
                         )
                 )
         ));
+
+        // ── Remaining video DSL moves (#23) ───────────────────────────────────
+
+        // Pain Split — averages attacker and defender current HP (floored)
+        INumber painSplitAvg = new Quotient(
+            new Sum(new CurrentHP(ATK), new CurrentHP(DEF)),
+            new Exactly(2)
+        );
+        registry.put("PainSplit", new Move(
+            "Pain Split", Element.NORMAL,
+            new Attempt(
+                "Pain Split",
+                new Probability<>(1.0),
+                new SetHP(painSplitAvg, ATK, DEF)
+            )
+        ));
+
+        // Self-Destruct — 200-power physical attack; user faints
+        registry.put("SelfDestruct", new Move(
+            "Self-Destruct", Element.NORMAL,
+            new Attempt(
+                "Self-Destruct",
+                new Probability<>(1.0),
+                new Sequence(
+                    new FormulaDamage(new Exactly(200), MoveCategory.PHYSICAL),
+                    new Faint(ATK)
+                )
+            )
+        ));
+
+        // Counter — priority -5; inflicts 2x last damage dealt, or fails if none
+        registry.put("Counter", new WithPrecondition(
+            new Geq(new LastDamageDealt(), 1.0),
+            new Move(
+                "Counter", Element.FIGHTING,
+                new Attempt(
+                    "Counter",
+                    new Probability<>(1.0),
+                    new DirectDamage(DEF, new Product(new LastDamageDealt(), new Exactly(2)))
+                ),
+                -5
+            )
+        ));
+
+        // Psywave — inflicts level-scaled damage in [0.5 * level, 1.5 * level]
+        registry.put("Psywave", new Move(
+            "Psywave", Element.PSYCHIC,
+            new Attempt(
+                "Psywave",
+                new Probability<>(1.0),
+                new DirectDamage(DEF, new Product(new Level(ATK), new Between(0.5, 1.5)))
+            )
+        ));
+
+        // Endeavor — sets defender's HP to attacker's HP when attacker HP < defender HP
+        registry.put("Endeavor", new WithPrecondition(
+            new And<>(
+                new Leq(new CurrentHP(ATK), new CurrentHP(DEF)),
+                new Not<>(new Geq(new CurrentHP(ATK), new CurrentHP(DEF)))
+            ),
+            new Move(
+                "Endeavor", Element.NORMAL,
+                new Attempt(
+                    "Endeavor",
+                    new Probability<>(1.0),
+                    new SetHP(DEF, new CurrentHP(ATK))
+                )
+            )
+        ));
     }
 
     /**
