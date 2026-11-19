@@ -86,6 +86,15 @@ public class Battler
     public int           getSpDefense()                 { return spDefense; }
     public int           getSpeed()                     { return speed; }
 
+    /**
+     * Returns the battler's effective speed for round ordering:
+     * halved ({@code speed / 2}) while {@link MajorStatus#PARALYZED}, unmodified otherwise.
+     */
+    public int getEffectiveSpeed()
+    {
+        return isParalyzed() ? speed / 2 : speed;
+    }
+
     // ── Major status (mutually exclusive) ──
     public MajorStatus getMajorStatus()
     {

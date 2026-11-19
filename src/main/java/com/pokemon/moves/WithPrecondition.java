@@ -32,6 +32,12 @@ public class WithPrecondition implements IMove
     public IMove getWrapped() { return wrapped; }
 
     @Override
+    public int priority()
+    {
+        return wrapped.priority();
+    }
+
+    @Override
     public void execute(Battle battle)
     {
         if (condition.check(battle))

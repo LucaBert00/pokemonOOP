@@ -234,7 +234,8 @@ public class MoveRegistry
                 "Quick Attack",
                 new Probability<>(1.0),
                 new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
-            )
+            ),
+            1
         ));
 
         registry.put("RockThrow", new Move(

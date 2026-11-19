@@ -26,6 +26,12 @@ public class WithApplicability implements IMove
     public IMove getWrapped() { return wrapped; }
 
     @Override
+    public int priority()
+    {
+        return wrapped.priority();
+    }
+
+    @Override
     public void execute(Battle battle)
     {
         Battler target = battle.getDefender();

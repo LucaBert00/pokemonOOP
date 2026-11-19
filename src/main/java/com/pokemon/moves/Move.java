@@ -15,12 +15,25 @@ public class Move implements IMove
     private final String   name;
     private final Element  element;
     private final IAttempt attempt;
+    private final int      priority;
 
     public Move(String name, Element element, IAttempt attempt)
     {
-        this.name    = name;
-        this.element = element;
-        this.attempt = attempt;
+        this(name, element, attempt, 0);
+    }
+
+    public Move(String name, Element element, IAttempt attempt, int priority)
+    {
+        this.name     = name;
+        this.element  = element;
+        this.attempt  = attempt;
+        this.priority = priority;
+    }
+
+    @Override
+    public int priority()
+    {
+        return priority;
     }
 
     @Override
