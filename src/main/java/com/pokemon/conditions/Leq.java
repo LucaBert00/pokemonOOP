@@ -3,22 +3,31 @@ package com.pokemon.conditions;
 import com.pokemon.api.ICondition;
 import com.pokemon.api.INumber;
 import com.pokemon.battle.Battle;
+import com.pokemon.numbers.Exactly;
+import java.util.Objects;
 
-/** ICondition<Battle>: true if number.evaluate(battle) <= threshold */
-
+/**
+ * Condition that holds when {@code left <= right}.
+ */
 public class Leq implements ICondition<Battle>
 {
-    private final INumber number;
-    private final double  threshold;
+    private final INumber left;
+    private final INumber right;
+
+    public Leq(INumber left, INumber right)
+    {
+        this.left = Objects.requireNonNull(left, "left must not be null");
+        this.right = Objects.requireNonNull(right, "right must not be null");
+    }
 
     public Leq(INumber number, double threshold)
     {
-        this.number = number; this.threshold = threshold;
+        this(number, new Exactly(threshold));
     }
 
     @Override
     public boolean check(Battle battle)
     {
-        return number.evaluate(battle) <= threshold;
+        return left.evaluate(battle) <= right.evaluate(battle);
     }
 }

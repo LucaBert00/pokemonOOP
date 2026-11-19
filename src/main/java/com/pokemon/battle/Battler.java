@@ -80,6 +80,10 @@ public class Battler
     public List<Element> getElements()                  { return elements; }
     public int           getMaxHp()                     { return maxHp; }
     public int           getCurrentHp()                 { return currentHp; }
+    public void setCurrentHp(int hp)
+    {
+        this.currentHp = Math.max(0, Math.min(maxHp, hp));
+    }
     public int           getLevel()                     { return level; }
     public int           getAttack()                    { return attack; }
     public int           getDefense()                   { return defense; }
