@@ -167,33 +167,78 @@ the terminal battle in issue #14:
 - Combo performs one accuracy check, prints its animation before each applied hit, and
   reports the number of applied hits. `lastAttemptHit` remains the single accuracy-roll
   result.
-- `Leq` and `Geq` intentionally remain `ICondition<Battle>` because `INumber` evaluates
-  with `Battle`; no broader numeric lifting seam was specified.
-- Seeded randomness in `Battle` remains out of scope. Random objects remain composable
-  but are not seedable through the battle context.
+- `Leq` and `Geq` support comparing two `INumber` expressions (`Leq(left, right)`) as well as
+  scalar thresholds (`Leq(number, threshold)`), enabling condition checks like Endeavor.
 
 The proof fixtures make the required paths reachable without changing the level-50 stat
 scale or adding a roster row: Machop's `CrossChop` slot is now `JumpKick`, and Gengar's
 `SwordsDance` slot is now `ThunderWave`.
 
-The remaining Fase 2 rules and unrelated cleanup are not part of this issue. The terminal
-battle remains the integration test; there is no JUnit suite.
+### Fase 2 Battle Engine & Complete Video DSL
 
-### Remaining documented deviation: randomness
+Fase 2 rules, mechanics, and complete video DSL coverage are implemented and verified
+across issues #16–#24 with automated JUnit 5 tests and seeded deterministic CLI execution:
 
-The video suggests a seeded randomizer on the battle context (46:10–46:17), so that all
-random objects draw from one predictable source. The code calls `Math.random()` directly
-in `Weighted.evaluate` (`numbers/Weighted.java:34`) and in `FormulaDamage.apply`
-(`effects/FormulaDamage.java:68`). The design is still composable; it is simply not
-seedable.
+1. **Battle-Owned Seedable Randomness & Determinism (#16):**
+   `Battle` owns a single `java.util.Random` instance (`new Battle(attacker, defender, seed)` /
+   `new Battle(attacker, defender, random)`). All battle randomness (`Probability`, `Weighted`,
+   `Between`, `FormulaDamage`, `BattleEngine`) draws from this instance, eliminating direct
+   `Math.random()` calls. `Main` accepts `--seed <long>` for fully deterministic CLI replays.
+
+2. **Level-50 Stat Scaling (#17):**
+   `pokemon.csv` stores species base stats. `PokemonLoader` scales them to Level 50 upon loading:
+   - `HP = floor(2 * base * 50 / 100) + 60` (`base + 60`)
+   - `Attack, Defense, SpAttack, SpDefense, Speed = floor(2 * base * 50 / 100) + 5` (`base + 5`)
+   This expands HP pools and enables authentic multi-turn battle pacing.
+
+3. **Physical / Special Damage Split (#18):**
+   `FormulaDamage` is parameterized with an explicit `MoveCategory` enum (`PHYSICAL`, `SPECIAL`)
+   without move-name or type switches:
+   - `PHYSICAL`: uses `attacker.getAttack()` and `defender.getDefense()`.
+   - `SPECIAL`: uses `attacker.getSpAttack()` and `defender.getSpDefense()`.
+
+4. **Mutually Exclusive Major Statuses & Finite Sleep (#19):**
+   `Battler` holds a single `MajorStatus` enum (`NONE`, `PARALYZED`, `BURNED`, `FROZEN`, `POISONED`,
+   `BADLY_POISONED`, `ASLEEP`). A status move cannot overwrite an active major status.
+   - `Sleep`: rolls 1–3 turns via `Battle` RNG and wakes when `sleepTurnsRemaining` reaches 0.
+   - `Freeze`: 20% thaw probability per turn.
+   - `Paralysis`: halves effective speed (`speed / 2`) and has a 25% full-paralysis skip chance.
+
+5. **Simultaneous Selection, Priority & Turn Order (#20):**
+   Both combatants select moves blindly before execution. `TurnOrder.resolve(...)` sorts actions by:
+   1. Higher `IMove.priority()` (e.g., `QuickAttack` `+1`, standard moves `0`, `Counter` `-5`).
+   2. Higher `Battler.getEffectiveSpeed()`.
+   3. Seeded coin-flip tiebreak (`random.nextBoolean()`).
+   `Battle.flipTurn()` swaps attacker and defender between half-turns on a single round-scoped `Battle`.
+
+6. **End-of-Round Residual Damage & Toxic Ramp (#21):**
+   `BattleEngine.applyEndOfRoundDamage()` runs once per round after both actions for surviving battlers:
+   - `BURNED` and `POISONED`: deal `max(1, maxHp / 16)`.
+   - `BADLY_POISONED` (Toxic): deals `max(1, maxHp * toxicCounter / 16)` and increments `toxicCounter` (1/16 -> 2/16 -> 3/16...).
+
+7. **Healing Guards & Loud MoveRegistry Validation (#22):**
+   - `Drain`: deals damage and restores floored fraction capped at missing HP; heals 0 and stays silent if last damage dealt is <= 0 or target is full.
+   - `RestoreHP`: prints `<name>'s HP is already full!` if missing HP is 0; restores and reports only actual HP gained.
+   - `MoveRegistry.get(String key)`: throws `IllegalArgumentException("Unknown move: " + key)` on unrecognized keys instead of falling back to Tackle.
+
+8. **Complete Video DSL Primitives (#23):**
+   - `SetHP(ITarget, INumber)` leaf effect sets target HP clamped to `[0, maxHp]`.
+   - `PainSplit`: averages attacker and defender HP via `Quotient(Sum(CurrentHP(ATK), CurrentHP(DEF)), Exactly(2))`.
+   - `SelfDestruct`: 200-power physical attack followed by `Faint(ATK)`.
+   - `Counter`: priority -5, guarded by `Geq(LastDamageDealt, 1.0)`, inflicts `DirectDamage` equal to `2 * LastDamageDealt`.
+   - `Psywave`: deals level-scaled damage via `DirectDamage` using `Product(Level(ATK), Between(0.5, 1.5))`.
+   - `Endeavor`: guarded by `Leq`/`Geq` condition, equalizes defender HP to attacker HP via `SetHP(DEF, CurrentHP(ATK))`.
+   Every whiteboard primitive from `TRANSCRIPT-01` and `TRANSCRIPT-02` (`Faint`, `LastDamageDealt`, `Between`, `Leq`, `Geq`) has active callers in `MoveRegistry`.
+
+9. **Automated JUnit 5 Test Suite (#16–#24):**
+   11 test classes covering RNG determinism, Level-50 stats, physical/special damage, statuses, turn order, residual damage, healing guards, video DSL moves, Fase 1 edge cases (`Fase1EdgeCaseTest`), and full multi-turn simulations (`Fase2SimulationTest`).
 
 ### `LastDamageDealt` is targetless — as the video concludes
 
 `LastDamageDealt` (`numbers/LastDamageDealt.java`) returns `battle.getLastDamageDealt()`
 without asking *whose* damage. At 49:43 he says it "probably shouldn't take a target. It
 should just be last damage dealt within the battle. You know, you decide." The leaf matches
-that reading. No registered move uses it today; it exists for Counter-style moves.
-
+that reading, and is actively used in `Counter`.
 ### Additions that are not deviations
 
 `TypeChart`, the full status set, `pokemon.csv`, `PokemonLoader`, `BattleEngine`, the

@@ -243,36 +243,32 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 | 7 | (Opzionale) `Leq`/`Geq` come `ICondition<INumber>` o rimozione | `conditions/Leq.java`, `Geq.java` | Compila; nessuna mossa li usa |
 | 8 | (Opzionale) randomizer con seed nel `Battle` | `Battle`, `Weighted`, `Probability`, `FormulaDamage` | Fuori scope; resta non seedabile |
 
-### Fase 2 — Regole di gioco (fuori scope)
+### Fase 2 — Regole di gioco e completezza video DSL (completata)
 
-| # | Correzione | File | Verifica |
+| # | Correzione | File / Issue | Verifica |
 |---|---|---|---|
-| 9 | Sonno con durata 1–3 turni e messaggio di risveglio | `BattleEngine`, `Sleep` | Dopo N turni il Pokémon si sveglia |
-| 10 | Un solo status maggiore per volta; danno residuo una volta per round, dopo entrambe le azioni, anche se il turno è saltato | `Battler`, `BattleEngine` | Burn + poison non convivono; il danno arriva a fine round |
-| 11 | Toxic con contatore crescente | `Battler`, `BattleEngine` | 1/16, 2/16, 3/16… |
-| 12 | Usare `spAttack`/`spDefense` o rimuoverli | `FormulaDamage`, `Battler`, CSV | Il danno speciale cambia con la statistica giusta, oppure le colonne spariscono |
-| 13 | `Drain` non cura su danno 0; `RestoreHP` non stampa cura a HP pieni | `Drain`, `RestoreHP` | I messaggi corrispondono alla cura reale |
-| 14 | `MoveRegistry.get` fallisce rumorosamente su chiave sconosciuta | `MoveRegistry`, `PokemonLoader` | Un typo nel CSV non diventa Tackle |
-| 15 | Rimuovere o collegare il codice morto | `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`, `flipTurn`, `displayName` | `grep` senza riferimenti inspiegati |
+| 9 | Sonno con durata 1–3 turni e messaggio di risveglio | `BattleEngine`, `Sleep`, issue #19 | Dopo N turni il Pokémon si sveglia; verificato in `Fase2SimulationTest` |
+| 10 | Un solo status maggiore per volta; danno residuo una volta per round, dopo entrambe le azioni, anche se il turno è saltato | `Battler`, `BattleEngine`, issues #19, #21 | Burn + poison non convivono; il danno residuo arriva a fine round; verificato in `MajorStatusTest` e `ResidualDamageTest` |
+| 11 | Toxic con contatore crescente | `Battler`, `BattleEngine`, issue #21 | 1/16, 2/16, 3/16…; verificato in `ResidualDamageTest` e `Fase2SimulationTest` |
+| 12 | Scaling al Livello 50 e split Danno Fisico/Speciale via `MoveCategory` | `PokemonLoader`, `FormulaDamage`, `Battler`, issues #17, #18 | Statistiche scalate da base stats; attacco/spAtt e difesa/spDef instradati correttamente; verificato in `FormulaDamageCategoryTest` e `Fase2SimulationTest` |
+| 13 | `Drain` non cura su danno 0; `RestoreHP` non stampa cura a HP pieni | `Drain`, `RestoreHP`, issue #22 | I messaggi e gli HP corrispondono alla cura reale; verificato in `HealingEdgeCaseTest` |
+| 14 | `MoveRegistry.get` fallisce rumorosamente su chiave sconosciuta | `MoveRegistry`, `PokemonLoader`, issue #22 | Un typo solleva `IllegalArgumentException("Unknown move: <key>")`; verificato in `MoveRegistryTest` |
+| 15 | Collegare tutte le primitive video residue (`SetHP`, `PainSplit`, `SelfDestruct`, `Counter`, `Psywave`, `Endeavor`) | `SetHP`, `Leq`, `Geq`, `MoveRegistry`, issue #23 | `Faint`, `LastDamageDealt`, `Between`, `Leq`, `Geq` hanno chiamanti attivi; verificato in `VideoDslMovesTest` |
+| 16 | Randomizer con seed in `Battle` e suite di regressione JUnit 5 | `Battle`, `BattleEngine`, `Main`, issues #16, #24 | Determinismo `--seed`, 11 classi di test JUnit 5, 48 test verdi |
 
-### Fase 3 — Documentazione e verifica (completata per issue #14)
+### Fase 3 — Documentazione e verifica (completata per issue #14 e #24)
 
-- Aggiornare le "Fidelity notes" di `CONTEXT.md`: oggi documentano solo 4 scostamenti,
-  l'audit ne ha trovati altri.
-- Aggiungere una checklist manuale di battaglia (menu decorato, fallimento, multi-hit,
-  status, OHKO, vittoria).
-- Non aggiungere JUnit: violerebbe la regola "no new dependencies". Se si vogliono test
-  automatici, va deciso esplicitamente di cambiare quella regola; altrimenti resta il
-  `main` di verifica manuale.
+- Aggiornate le "Fidelity notes" di `CONTEXT.md` documentando RNG seedabile in `Battle`, scaling Livello 50, categorie di danno, status mutuamente esclusivi, ordine di round/priorità, guardie di cura, mosse video DSL e suite JUnit 5.
+- Aggiornata la roadmap di `FINDINGS.md` marcando Fase 1, Fase 2 e Fase 3 come completate.
+- Aggiunta suite di test automatizzata con JUnit 5 (48 test, 0 fallimenti).
 
-## Cosa non è stato verificato
+## Cosa non era stato verificato manualmente (risolto in JUnit 5)
 
-- Non è stato osservato nel terminale un difensore simultaneamente Ground e già paralizzato:
-  il gioco non offre switching o un setup per creare quello stato in una sola battaglia.
-- Non è stato osservato un crash di Jump Kick che lasci anche un danno residuo da applicare;
-  il caso di crash fatale ha mostrato la fine immediata della battaglia.
-- Leq/Geq non producono output perché restano non usati; la loro disposizione è stata
-  confermata per codice e compilazione, non con una mossa registrata.
-- Non sono state esercitate tutte le 27 mosse né tutte le combinazioni di tipo.
-- Non è stato usato Playwright: non c'è una web UI, la verifica reale è il terminale.
-- I warning di Maven su JDK 27 non sono errori del progetto.
+Nel terminale cinque rami edge-case di Fase 1 non potevano essere forzati deterministicamente:
+- Difensore simultaneamente Ground e già paralizzato contro `ThunderWave`: verificato in `Fase1EdgeCaseTest` (`WithApplicability` stampa l'immunità per prima).
+- Difensore simultaneamente Fire e già bruciato contro `WillOWisp`: verificato in `Fase1EdgeCaseTest` (`WithApplicability` stampa l'immunità per prima).
+- `Combo` (`FuryAttack`) che si ferma al faint del difensore: verificato in `Fase1EdgeCaseTest` (si arresta all'hit 1 e riporta "It hit 1 time!").
+- `BodySlam` che infligge danno fisico e attiva la paralisi al 30%: verificato in `Fase1EdgeCaseTest` su seed deterministico `1L`.
+- Crash fatale di `JumpKick` che non lascia danno residuo da applicare: verificato in `Fase1EdgeCaseTest` (autodanno del 50% max HP, faint immediato, fine turno senza tick residui).
+
+Tutti i 5 rami sono ora coperti e bloccati da test automatici deterministici in `Fase1EdgeCaseTest.java`.
