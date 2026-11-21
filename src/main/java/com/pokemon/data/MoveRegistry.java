@@ -12,6 +12,7 @@ import com.pokemon.targets.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Defines all moves using the full DSL from the video.
@@ -447,6 +448,12 @@ public class MoveRegistry
                 )
             )
         ));
+    }
+
+    /** Returns an unmodifiable snapshot of all registered move keys. */
+    public static Set<String> keys()
+    {
+        return Set.copyOf(registry.keySet());
     }
 
     /**
