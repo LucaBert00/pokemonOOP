@@ -264,13 +264,24 @@ public class MoveRegistry
             )
         ));
 
-        // Guillotine — OHKO with 30% accuracy
-        registry.put("Guillotine", new Move(
-            "Guillotine", Element.NORMAL,
-            new Attempt(
-                "Guillotine",
-                new Probability<>(0.30),
-                new OHKO(DEF)
+        // Guillotine — OHKO
+        registry.put("Guillotine", new WithPrecondition(
+            new Geq(new Level(ATK), new Level(DEF)),
+            new Move(
+                "Guillotine", Element.NORMAL,
+                new Attempt(
+                    "Guillotine",
+                    new Probability<>(
+                        new Quotient(
+                            new Sum(
+                                new Sum(new Level(ATK), new Product(new Level(DEF), new Exactly(-1))),
+                                new Exactly(30)
+                            ),
+                            new Exactly(100)
+                        )
+                    ),
+                    new OHKO(DEF)
+                )
             )
         ));
 
