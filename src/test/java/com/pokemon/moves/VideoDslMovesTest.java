@@ -5,7 +5,12 @@ import com.pokemon.attempts.Attempt;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
 import com.pokemon.battle.Element;
+import com.pokemon.battle.MajorStatus;
+import com.pokemon.conditions.For;
+import com.pokemon.conditions.IsBadlyPoisoned;
+import com.pokemon.conditions.IsPoisoned;
 import com.pokemon.conditions.Leq;
+import com.pokemon.conditions.Or;
 import com.pokemon.conditions.Probability;
 import com.pokemon.data.MoveRegistry;
 import com.pokemon.effects.DirectDamage;
@@ -410,5 +415,77 @@ class VideoDslMovesTest
 
         assertEquals(0, lowerDef.getCurrentHp());
         assertTrue(lowerDef.isFainted());
+    }
+
+    @Test
+    void venoshockPowerEvaluatesTo65NormallyAndDoublesTo130AgainstEitherPoisonStatus()
+    {
+        // Ensures Venoshock is registered in MoveRegistry
+        assertNotNull(MoveRegistry.get("Venoshock"));
+
+        ConditionalNumber venoshockPower = new ConditionalNumber(
+            new For(new Defender(), new Or<>(new IsPoisoned(), new IsBadlyPoisoned())),
+            new Exactly(130),
+            new Exactly(65)
+        );
+
+        Battler attacker = battler("Muk", Element.POISON, 200, 200, 50, 70);
+
+        Battler cleanDef = battler("Target", Element.NORMAL, 200, 200, 50, 60);
+        assertEquals(65.0, venoshockPower.evaluate(new Battle(attacker, cleanDef, 42L)));
+
+        Battler poisonedDef = battler("Target", Element.NORMAL, 200, 200, 50, 60);
+        poisonedDef.applyMajorStatus(MajorStatus.POISONED);
+        assertEquals(130.0, venoshockPower.evaluate(new Battle(attacker, poisonedDef, 42L)));
+
+        Battler badlyPoisonedDef = battler("Target", Element.NORMAL, 200, 200, 50, 60);
+        badlyPoisonedDef.applyMajorStatus(MajorStatus.BADLY_POISONED);
+        assertEquals(130.0, venoshockPower.evaluate(new Battle(attacker, badlyPoisonedDef, 42L)));
+
+        Battler burnedDef = battler("Target", Element.NORMAL, 200, 200, 50, 60);
+        burnedDef.applyMajorStatus(MajorStatus.BURNED);
+        assertEquals(65.0, venoshockPower.evaluate(new Battle(attacker, burnedDef, 42L)));
+
+        Battler paralyzedDef = battler("Target", Element.NORMAL, 200, 200, 50, 60);
+        paralyzedDef.applyMajorStatus(MajorStatus.PARALYZED);
+        assertEquals(65.0, venoshockPower.evaluate(new Battle(attacker, paralyzedDef, 42L)));
+    }
+
+    @Test
+    void venoshockExecuteDoublesDamageAgainstPoisonedAndBadlyPoisonedDefenders()
+    {
+        IMove venoshock = MoveRegistry.get("Venoshock");
+
+        // Unstatused defender: base power 65 -> 29 damage on seed 42L
+        Battler atkClean = battler("User", Element.NORMAL, 200, 200, 50, 80);
+        Battler defClean = battler("Target", Element.NORMAL, 200, 200, 50, 70);
+        venoshock.execute(new Battle(atkClean, defClean, 42L));
+        int cleanDamage = 200 - defClean.getCurrentHp();
+
+        // POISONED defender: doubled power 130 -> 56 damage on seed 42L
+        Battler atkPoisoned = battler("User", Element.NORMAL, 200, 200, 50, 80);
+        Battler defPoisoned = battler("Target", Element.NORMAL, 200, 200, 50, 70);
+        defPoisoned.applyMajorStatus(MajorStatus.POISONED);
+        venoshock.execute(new Battle(atkPoisoned, defPoisoned, 42L));
+        int poisonedDamage = 200 - defPoisoned.getCurrentHp();
+
+        // BADLY_POISONED defender: doubled power 130 -> 56 damage on seed 42L
+        Battler atkToxic = battler("User", Element.NORMAL, 200, 200, 50, 80);
+        Battler defToxic = battler("Target", Element.NORMAL, 200, 200, 50, 70);
+        defToxic.applyMajorStatus(MajorStatus.BADLY_POISONED);
+        venoshock.execute(new Battle(atkToxic, defToxic, 42L));
+        int badlyPoisonedDamage = 200 - defToxic.getCurrentHp();
+
+        // BURNED defender: remains at base power 65 -> 29 damage on seed 42L
+        Battler atkBurned = battler("User", Element.NORMAL, 200, 200, 50, 80);
+        Battler defBurned = battler("Target", Element.NORMAL, 200, 200, 50, 70);
+        defBurned.applyMajorStatus(MajorStatus.BURNED);
+        venoshock.execute(new Battle(atkBurned, defBurned, 42L));
+        int burnedDamage = 200 - defBurned.getCurrentHp();
+
+        assertEquals(29, cleanDamage);
+        assertEquals(56, poisonedDamage);
+        assertEquals(56, badlyPoisonedDamage);
+        assertEquals(29, burnedDamage);
     }
 }
