@@ -50,7 +50,6 @@ public class MoveRegistry
             "Body Slam", Element.NORMAL,
             new Attempt(
                 "Body Slam",
-                new Probability<>(1.0),
                 new Sequence(
                     new FormulaDamage(new Exactly(85), MoveCategory.PHYSICAL),
                     new ConditionalEffect(
@@ -130,7 +129,6 @@ public class MoveRegistry
             "Ember", Element.FIRE,
             new Attempt(
                 "Ember",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL)
             )
         ));
@@ -139,7 +137,6 @@ public class MoveRegistry
             "Flamethrower", Element.FIRE,
             new Attempt(
                 "Flamethrower",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL)
             )
         ));
@@ -148,7 +145,6 @@ public class MoveRegistry
             "Water Gun", Element.WATER,
             new Attempt(
                 "Water Gun",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL)
             )
         ));
@@ -157,7 +153,6 @@ public class MoveRegistry
             "Surf", Element.WATER,
             new Attempt(
                 "Surf",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL)
             )
         ));
@@ -168,7 +163,6 @@ public class MoveRegistry
                 "Thunderbolt", Element.ELECTRIC,
                 new Attempt(
                     "Thunderbolt",
-                    new Probability<>(1.0),
                     new Sequence(
                         new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                         new ConditionalEffect(
@@ -202,7 +196,6 @@ public class MoveRegistry
             "Vine Whip", Element.GRASS,
             new Attempt(
                 "Vine Whip",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(45), MoveCategory.PHYSICAL)
             )
         ));
@@ -212,7 +205,6 @@ public class MoveRegistry
             "Mega Drain", Element.GRASS,
             new Attempt(
                 "Mega Drain",
-                new Probability<>(1.0),
                 new Sequence(
                     new FormulaDamage(new Exactly(40), MoveCategory.SPECIAL),
                     new Drain(ATK, new Exactly(0.5))
@@ -224,7 +216,6 @@ public class MoveRegistry
             "Scratch", Element.NORMAL,
             new Attempt(
                 "Scratch",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
             )
         ));
@@ -233,7 +224,6 @@ public class MoveRegistry
             "Quick Attack", Element.NORMAL,
             new Attempt(
                 "Quick Attack",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(40), MoveCategory.PHYSICAL)
             ),
             1
@@ -252,7 +242,6 @@ public class MoveRegistry
             "Karate Chop", Element.FIGHTING,
             new Attempt(
                 "Karate Chop",
-                new Probability<>(1.0),
                 new FormulaDamage(new Exactly(50), MoveCategory.PHYSICAL)
             )
         ));
@@ -271,7 +260,6 @@ public class MoveRegistry
             "Swords Dance", Element.NORMAL,
             new Attempt(
                 "Swords Dance",
-                new Probability<>(1.0),
                 new AttackStatChange(ATK, new Exactly(20))
             )
         ));
@@ -291,7 +279,6 @@ public class MoveRegistry
             "Recover", Element.NORMAL,
             new Attempt(
                 "Recover",
-                new Probability<>(1.0),
                 new RestoreHP(ATK,
                     new Product(new MaxHP(ATK), new Exactly(0.5)))
             )
@@ -339,7 +326,6 @@ public class MoveRegistry
                         "Spore", Element.GRASS,
                         new Attempt(
                                 "Spore",
-                                new Probability<>(1.0),
                                 new Sleep(DEF),
                                 new NoEffect(),
                                 new NoEffect()
@@ -353,7 +339,6 @@ public class MoveRegistry
                 "Ice Beam", Element.ICE,
                 new Attempt(
                         "Ice Beam",
-                        new Probability<>(1.0),
                         new Sequence(
                                 new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                                 new ConditionalEffect(
@@ -369,7 +354,6 @@ public class MoveRegistry
                 "Sludge Bomb", Element.POISON,
                 new Attempt(
                         "Sludge Bomb",
-                        new Probability<>(1.0),
                         new Sequence(
                                 new FormulaDamage(new Exactly(90), MoveCategory.SPECIAL),
                                 new ConditionalEffect(
@@ -391,7 +375,6 @@ public class MoveRegistry
             "Pain Split", Element.NORMAL,
             new Attempt(
                 "Pain Split",
-                new Probability<>(1.0),
                 new SetHP(painSplitAvg, ATK, DEF)
             )
         ));
@@ -401,7 +384,6 @@ public class MoveRegistry
             "Self-Destruct", Element.NORMAL,
             new Attempt(
                 "Self-Destruct",
-                new Probability<>(1.0),
                 new Sequence(
                     new FormulaDamage(new Exactly(200), MoveCategory.PHYSICAL),
                     new Faint(ATK)
@@ -416,7 +398,6 @@ public class MoveRegistry
                 "Counter", Element.FIGHTING,
                 new Attempt(
                     "Counter",
-                    new Probability<>(1.0),
                     new DirectDamage(DEF, new Product(new LastDamageDealt(), new Exactly(2)))
                 ),
                 -5
@@ -428,7 +409,6 @@ public class MoveRegistry
             "Psywave", Element.PSYCHIC,
             new Attempt(
                 "Psywave",
-                new Probability<>(1.0),
                 new DirectDamage(DEF, new Product(new Level(ATK), new Between(0.5, 1.5)))
             )
         ));
@@ -443,7 +423,6 @@ public class MoveRegistry
                 "Endeavor", Element.NORMAL,
                 new Attempt(
                     "Endeavor",
-                    new Probability<>(1.0),
                     new SetHP(DEF, new CurrentHP(ATK))
                 )
             )
