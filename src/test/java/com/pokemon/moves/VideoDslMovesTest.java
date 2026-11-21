@@ -291,4 +291,50 @@ class VideoDslMovesTest
         assertEquals(65.0, brinePower.evaluate(new Battle(attacker, healthyDefender, 42L)));
         assertEquals(130.0, brinePower.evaluate(new Battle(attacker, weakenedDefender, 42L)));
     }
+
+    @Test
+    void psywaveFloorsDamageAtOneEvenWhenScaledProductIsZero()
+    {
+        IMove psywave = MoveRegistry.get("Psywave");
+        // Level 0 causes Level(ATK) * Between(0.5, 1.5) == 0.0; Max(1, ...) must floor to 1
+        Battler zeroLevelAttacker = battler("Alakazam", Element.PSYCHIC, 150, 150, 0, 120);
+        Battler defender = battler("Chansey", Element.NORMAL, 500, 500, 50, 50);
+        Battle battle = new Battle(zeroLevelAttacker, defender, 42L);
+
+        String out = captureStdout(() -> psywave.execute(battle));
+        assertEquals(499, defender.getCurrentHp(), "Psywave must deal at least 1 damage via Max floor");
+        assertEquals(1.0, battle.getLastDamageDealt());
+        assertTrue(out.contains("took 1 direct damage!"));
+    }
+
+    @Test
+    void brineDealsBasePowerAboveHalfHpAndDoublesPowerAtOrBelowHalfHp()
+    {
+        IMove brine = MoveRegistry.get("Brine");
+
+        // Above 50% HP (101/200): base power 65 -> 29 damage on seed 42L
+        Battler atkAbove = battler("Dewgong", Element.NORMAL, 200, 200, 50, 80);
+        Battler defAbove = battler("Target", Element.NORMAL, 200, 101, 50, 70);
+        Battle battleAbove = new Battle(atkAbove, defAbove, 42L);
+        brine.execute(battleAbove);
+        int dmgAbove = 101 - defAbove.getCurrentHp();
+
+        // At exact 50% HP boundary (100/200): doubled power 130 -> 56 damage on seed 42L
+        Battler atkAtHalf = battler("Dewgong", Element.NORMAL, 200, 200, 50, 80);
+        Battler defAtHalf = battler("Target", Element.NORMAL, 200, 100, 50, 70);
+        Battle battleAtHalf = new Battle(atkAtHalf, defAtHalf, 42L);
+        brine.execute(battleAtHalf);
+        int dmgAtHalf = 100 - defAtHalf.getCurrentHp();
+
+        // Below 50% HP (60/200): doubled power 130 -> 56 damage on seed 42L
+        Battler atkBelow = battler("Dewgong", Element.NORMAL, 200, 200, 50, 80);
+        Battler defBelow = battler("Target", Element.NORMAL, 200, 60, 50, 70);
+        Battle battleBelow = new Battle(atkBelow, defBelow, 42L);
+        brine.execute(battleBelow);
+        int dmgBelow = 60 - defBelow.getCurrentHp();
+
+        assertEquals(29, dmgAbove);
+        assertEquals(56, dmgAtHalf);
+        assertEquals(56, dmgBelow);
+    }
 }

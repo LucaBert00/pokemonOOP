@@ -404,12 +404,37 @@ public class MoveRegistry
             )
         ));
 
-        // Psywave — inflicts level-scaled damage in [0.5 * level, 1.5 * level]
+        // Psywave — inflicts level-scaled damage in [0.5 * level, 1.5 * level], floored at 1
         registry.put("Psywave", new Move(
             "Psywave", Element.PSYCHIC,
             new Attempt(
                 "Psywave",
-                new DirectDamage(DEF, new Product(new Level(ATK), new Between(0.5, 1.5)))
+                new DirectDamage(
+                    DEF,
+                    new Max(
+                        new Exactly(1),
+                        new Product(new Level(ATK), new Between(0.5, 1.5))
+                    )
+                )
+            )
+        ));
+
+        // Brine — 65 base power, doubling to 130 when defender HP <= 50% max HP
+        registry.put("Brine", new Move(
+            "Brine", Element.WATER,
+            new Attempt(
+                "Brine",
+                new FormulaDamage(
+                    new ConditionalNumber(
+                        new Leq(
+                            new CurrentHP(DEF),
+                            new Product(new MaxHP(DEF), new Exactly(0.5))
+                        ),
+                        new Exactly(130),
+                        new Exactly(65)
+                    ),
+                    MoveCategory.SPECIAL
+                )
             )
         ));
 
