@@ -463,6 +463,22 @@ public class MoveRegistry
                 )
             )
         ));
+
+        // Venoshock — 65 base power, doubling to 130 when defender is poisoned or badly poisoned
+        registry.put("Venoshock", new Move(
+            "Venoshock", Element.POISON,
+            new Attempt(
+                "Venoshock",
+                new FormulaDamage(
+                    new ConditionalNumber(
+                        new For(DEF, new Or<>(new IsPoisoned(), new IsBadlyPoisoned())),
+                        new Exactly(130),
+                        new Exactly(65)
+                    ),
+                    MoveCategory.SPECIAL
+                )
+            )
+        ));
     }
 
     /** Returns an unmodifiable snapshot of all registered move keys. */
