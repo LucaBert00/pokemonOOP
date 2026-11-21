@@ -13,6 +13,7 @@ import com.pokemon.effects.SetHP;
 import com.pokemon.numbers.ConditionalNumber;
 import com.pokemon.numbers.CurrentHP;
 import com.pokemon.numbers.Exactly;
+import com.pokemon.numbers.Level;
 import com.pokemon.numbers.Max;
 import com.pokemon.numbers.MaxHP;
 import com.pokemon.numbers.Product;
@@ -336,5 +337,78 @@ class VideoDslMovesTest
         assertEquals(29, dmgAbove);
         assertEquals(56, dmgAtHalf);
         assertEquals(56, dmgBelow);
+    }
+
+    @Test
+    void dynamicProbabilityClampsNegativeToZeroAndAboveOneToOne()
+    {
+        Probability<Battle> neverHits = new Probability<>(new Exactly(-0.25));
+        Probability<Battle> alwaysHits = new Probability<>(new Exactly(1.75));
+
+        for (long seed = 0L; seed < 50L; seed++)
+        {
+            Battle battle = new Battle(
+                battler("Attacker", Element.NORMAL, 100, 100, 50, 80),
+                battler("Defender", Element.NORMAL, 100, 100, 50, 70),
+                seed
+            );
+            assertFalse(neverHits.check(battle),
+                "Expected negative dynamic probability to clamp to 0.0 for seed " + seed);
+            assertTrue(alwaysHits.check(battle),
+                "Expected >1.0 dynamic probability to clamp to 1.0 for seed " + seed);
+        }
+    }
+
+    @Test
+    void guillotineFailsPreconditionWhenAttackerLevelIsLowerThanDefender()
+    {
+        IMove guillotine = MoveRegistry.get("Guillotine");
+        Battler lowerAtk = battler("Onix", Element.ROCK, 200, 200, 40, 70);
+        Battler higherDef = battler("Snorlax", Element.NORMAL, 250, 250, 50, 30);
+        Battle battle = new Battle(lowerAtk, higherDef, 4110L);
+
+        String out = captureStdout(() -> guillotine.execute(battle));
+
+        assertTrue(out.contains("  But it failed!"),
+            "Expected precondition failure message when attacker level < defender level");
+        assertEquals(250, higherDef.getCurrentHp(),
+            "Defender HP must remain unchanged when Guillotine precondition fails");
+        assertFalse(higherDef.isFainted());
+    }
+
+    @Test
+    void guillotineUsesThirtyPercentAccuracyAtEqualLevels()
+    {
+        IMove guillotine = MoveRegistry.get("Guillotine");
+
+        // Seed 4110L: first nextDouble() < 0.30 -> hits and KOs equal-level defender
+        Battler atkHit = battler("Onix", Element.ROCK, 200, 200, 50, 70);
+        Battler defHit = battler("Snorlax", Element.NORMAL, 250, 250, 50, 30);
+        guillotine.execute(new Battle(atkHit, defHit, 4110L));
+        assertEquals(0, defHit.getCurrentHp());
+        assertTrue(defHit.isFainted());
+
+        // Seed 6439L: first nextDouble() ~0.301 >= 0.30 -> misses equal-level defender
+        Battler atkMiss = battler("Onix", Element.ROCK, 200, 200, 50, 70);
+        Battler defMiss = battler("Snorlax", Element.NORMAL, 250, 250, 50, 30);
+        String missOut = captureStdout(() -> guillotine.execute(new Battle(atkMiss, defMiss, 6439L)));
+        assertEquals(250, defMiss.getCurrentHp());
+        assertFalse(defMiss.isFainted());
+        assertTrue(missOut.contains("missed"));
+    }
+
+    @Test
+    void guillotineScalesAccuracyWithLevelAdvantage()
+    {
+        IMove guillotine = MoveRegistry.get("Guillotine");
+
+        // Lv.70 vs Lv.50 -> accuracy = (70 - 50 + 30) / 100 = 0.50
+        // Seed 6439L (~0.301) missed at 0.30, so hitting here proves scaled 0.50 threshold
+        Battler higherAtk = battler("Onix", Element.ROCK, 200, 200, 70, 70);
+        Battler lowerDef = battler("Snorlax", Element.NORMAL, 250, 250, 50, 30);
+        guillotine.execute(new Battle(higherAtk, lowerDef, 6439L));
+
+        assertEquals(0, lowerDef.getCurrentHp());
+        assertTrue(lowerDef.isFainted());
     }
 }
