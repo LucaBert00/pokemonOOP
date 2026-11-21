@@ -5,11 +5,17 @@ import com.pokemon.attempts.Attempt;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
 import com.pokemon.battle.Element;
+import com.pokemon.conditions.Leq;
 import com.pokemon.conditions.Probability;
 import com.pokemon.data.MoveRegistry;
 import com.pokemon.effects.DirectDamage;
 import com.pokemon.effects.SetHP;
+import com.pokemon.numbers.ConditionalNumber;
+import com.pokemon.numbers.CurrentHP;
 import com.pokemon.numbers.Exactly;
+import com.pokemon.numbers.Max;
+import com.pokemon.numbers.MaxHP;
+import com.pokemon.numbers.Product;
 import com.pokemon.targets.Attacker;
 import com.pokemon.targets.Defender;
 import java.io.ByteArrayOutputStream;
@@ -252,5 +258,37 @@ class VideoDslMovesTest
         assertTrue(explicitBattle.isLastAttemptHit());
         assertTrue(defaultBattle.isLastAttemptHit());
         assertEquals(explicitBattle.nextDouble(), defaultBattle.nextDouble());
+    }
+
+    @Test
+    void maxEvaluatesGreaterOperandAcrossLeftGreaterRightGreaterAndEqualValues()
+    {
+        Battler attacker = battler("Attacker", Element.NORMAL, 120, 45, 50, 80);
+        Battler defender = battler("Defender", Element.NORMAL, 120, 30, 35, 70);
+        Battle battle = new Battle(attacker, defender, 42L);
+
+        assertEquals(42.0, new Max(new Exactly(42), new Exactly(17)).evaluate(battle));
+        assertEquals(35.0, new Max(new Exactly(12), new Exactly(35)).evaluate(battle));
+        assertEquals(20.0, new Max(new Exactly(20), new Exactly(20)).evaluate(battle));
+
+        // Dynamic battler-derived operands: CurrentHP(ATK)=45 vs Level(DEF)=35
+        assertEquals(45.0, new Max(new CurrentHP(new Attacker()), new com.pokemon.numbers.Level(new Defender())).evaluate(battle));
+    }
+
+    @Test
+    void conditionalNumberEvaluatesTrueBranchWhenConditionHoldsAndFalseBranchOtherwise()
+    {
+        Battler attacker = battler("Attacker", Element.NORMAL, 120, 120, 50, 80);
+        Battler healthyDefender = battler("Healthy", Element.NORMAL, 200, 101, 50, 70);
+        Battler weakenedDefender = battler("Weakened", Element.NORMAL, 200, 100, 50, 70);
+
+        ConditionalNumber brinePower = new ConditionalNumber(
+            new Leq(new CurrentHP(new Defender()), new Product(new MaxHP(new Defender()), new Exactly(0.5))),
+            new Exactly(130),
+            new Exactly(65)
+        );
+
+        assertEquals(65.0, brinePower.evaluate(new Battle(attacker, healthyDefender, 42L)));
+        assertEquals(130.0, brinePower.evaluate(new Battle(attacker, weakenedDefender, 42L)));
     }
 }
