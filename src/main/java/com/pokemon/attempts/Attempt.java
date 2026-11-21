@@ -2,6 +2,7 @@ package com.pokemon.attempts;
 
 import com.pokemon.api.*;
 import com.pokemon.battle.Battle;
+import com.pokemon.conditions.Probability;
 import com.pokemon.effects.NoEffect;
 
 /**
@@ -34,6 +35,18 @@ public class Attempt implements IAttempt
     public Attempt(String animationName, ICondition<Battle> accuracy, IEffect onHit)
     {
         this(animationName, accuracy, onHit, new NoEffect(), new NoEffect());
+    }
+
+    /** Convenience constructor — accuracy defaults to 1.0. */
+    public Attempt(String animationName, IEffect onHit)
+    {
+        this(animationName, new Probability<>(1.0), onHit, new NoEffect(), new NoEffect());
+    }
+
+    /** Full constructor with default accuracy — onMiss and after are explicit. */
+    public Attempt(String animationName, IEffect onHit, IEffect onMiss, IEffect after)
+    {
+        this(animationName, new Probability<>(1.0), onHit, onMiss, after);
     }
 
     @Override
