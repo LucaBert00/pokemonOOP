@@ -1,9 +1,11 @@
 package com.pokemon.moves;
 
 import com.pokemon.api.IMove;
+import com.pokemon.attempts.Attempt;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
 import com.pokemon.battle.Element;
+import com.pokemon.conditions.Probability;
 import com.pokemon.data.MoveRegistry;
 import com.pokemon.effects.DirectDamage;
 import com.pokemon.effects.SetHP;
@@ -190,5 +192,65 @@ class VideoDslMovesTest
         assertEquals(30, healthyDef.getCurrentHp());
         assertEquals(30, hurtAtk.getCurrentHp());
         assertTrue(hurtOut.contains("Blissey's HP became 30!"));
+    }
+
+    @Test
+    void defaultAccuracyAttemptAlwaysHitsAcrossSeededBattles()
+    {
+        for (long seed = 0L; seed < 100L; seed++)
+        {
+            Battler atk = battler("Attacker", Element.NORMAL, 100, 100, 50, 80);
+            Battler def = battler("Defender", Element.NORMAL, 100, 100, 50, 70);
+            Battle battle = new Battle(atk, def, seed);
+
+            int[] onHitCount = {0};
+            new Attempt("Test", b -> onHitCount[0]++).execute(battle);
+
+            assertTrue(battle.isLastAttemptHit(),
+                "Expected default-accuracy Attempt to hit for seed " + seed);
+            assertEquals(1, onHitCount[0],
+                "Expected onHit to run once for seed " + seed);
+        }
+    }
+
+    @Test
+    void defaultAccuracyFullOverloadMatchesExplicitCertainAccuracy()
+    {
+        Battle explicitBattle = new Battle(
+            battler("Attacker", Element.NORMAL, 100, 100, 50, 80),
+            battler("Defender", Element.NORMAL, 100, 100, 50, 70),
+            42L
+        );
+        Battle defaultBattle = new Battle(
+            battler("Attacker", Element.NORMAL, 100, 100, 50, 80),
+            battler("Defender", Element.NORMAL, 100, 100, 50, 70),
+            42L
+        );
+
+        int[] explicitCounts = new int[3];
+        String explicitOut = captureStdout(() -> new Attempt(
+            "Test",
+            new Probability<>(1.0),
+            b -> explicitCounts[0]++,
+            b -> explicitCounts[1]++,
+            b -> explicitCounts[2]++
+        ).execute(explicitBattle));
+
+        int[] defaultCounts = new int[3];
+        String defaultOut = captureStdout(() -> new Attempt(
+            "Test",
+            b -> defaultCounts[0]++,
+            b -> defaultCounts[1]++,
+            b -> defaultCounts[2]++
+        ).execute(defaultBattle));
+
+        assertArrayEquals(explicitCounts, defaultCounts);
+        assertEquals(1, defaultCounts[0]);
+        assertEquals(0, defaultCounts[1]);
+        assertEquals(1, defaultCounts[2]);
+        assertEquals(explicitOut, defaultOut);
+        assertTrue(explicitBattle.isLastAttemptHit());
+        assertTrue(defaultBattle.isLastAttemptHit());
+        assertEquals(explicitBattle.nextDouble(), defaultBattle.nextDouble());
     }
 }
