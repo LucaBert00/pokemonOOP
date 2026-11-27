@@ -74,7 +74,7 @@ usa.
 |---|---|---|
 | **Strategy** | `INumber` in `FormulaDamage`, `IEffect` in `Attempt`, `ICondition` per accuratezza/applicabilità | Corretto. Famiglie di algoritmi intercambiabili. |
 | **Composite** | `Sum`/`Product`/`Quotient`, `Sequence`/`ConditionalEffect`, `And`/`Or`/`Not`, `Cascade`/`Combo` | Corretto. Il composto implementa la stessa interfaccia della foglia. |
-| **Decorator** | `WithPrecondition`, `WithApplicability` | Forma corretta: stessa interfaccia, un solo componente avvolto. Ordine sbagliato in due mosse. |
+| **Decorator** | `WithPrecondition`, `WithApplicability` | Corretto: stessa interfaccia, un solo componente avvolto. Ordine corretto in Fase 1 (#10): `WithApplicability` fuori, `WithPrecondition` dentro. |
 | **Command** | `IMove` comando, `Battle` receiver, `Battler` tiene le mosse, `BattleEngine` chiama `execute` | Corretto, con una sfumatura: il video identifica l'invoker nel `Battler`; qui il ruolo è diviso tra `Battler` (tiene) e `BattleEngine` (invoca). Non è un fallimento del pattern, è una scelta architetturale. |
 | **Null Object** | `NoEffect` come default di `onMiss`/`after` e come else di `ConditionalEffect` | Corretto. Gli slot non sono mai `null`. |
 
@@ -82,7 +82,8 @@ usa.
 
 ### Funziona (verificato)
 
-- Caricamento di **16 Pokémon** da `pokemon.csv` e **27 mosse** da `MoveRegistry`.
+- Caricamento di **16 Pokémon** da `pokemon.csv` e **36 mosse** da `MoveRegistry` (tutte raggiungibili dal roster CSV; `PokemonLoaderTest`).
+- Suite JUnit 5 attiva: **13 classi di test, 78 test verdi** (`mvn test`).
 - Selezione del giocatore, CPU casuale diversa, ordine per Speed.
 - Menu, attacco, danno con STAB e type chart, faint, vittoria/sconfitta.
 - Controlli di sonno, congelamento e paralisi prima dell'azione.
@@ -150,14 +151,17 @@ Non osservato o non verificabile con il terminale e il roster attuali:
 8. **`MoveRegistry.get` fa fallback silenzioso a Tackle** su una chiave sconosciuta. Un
    typo nel CSV diventa una mossa normale senza errore.
 9. **Codice morto:** `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`,
-   `Battle.flipTurn`, `MoveRegistry.displayName`.
+   `Battle.flipTurn`, `MoveRegistry.displayName`. *(Risolto tra Fase 1 e Fase 2: `displayName` rimosso in #10, `flipTurn` collegato in #20, `Faint`/`Between`/`Leq`/`Geq`/`LastDamageDealt` collegati in #23.)*
+10. **Limiti noti post-Fase 2 / Fase 4 (#26–#31):**
+   - `CrashDamage` scrive su `battle.setLastDamageDealt(dmg)`: se chi attacca per primo manca `JumpKick` e sopravvive al crash nello stesso round di `Counter`, `Counter` legge il danno da crash come `LastDamageDealt`.
+   - Tutti i Pokémon in `pokemon.csv` sono a Livello 50: i rami `< Lv` e scaling `> 30%` di `Guillotine` (#29) sono coperti in JUnit ma non raggiungibili dal roster CSV.
+   - `Weather` (#31) persiste indefinitamente finché non viene sovrascritto (nessun contatore di durata turni) e finora solo `Weather.SUN` ha mosse dedicate (`SunnyDay`, `SolarBeam`); `RAIN`/`SANDSTORM`/`HAIL` hanno enum, `HasWeather` e `SetWeather` pronti ma nessuna mossa ancora collegata.
 
 ### È vuoto (non implementato, non necessariamente un problema)
 
-- PP, switching, oggetti, abilità, meteo, priorità, critici.
-- Durata degli status, immunità di tipo agli status, rampa di Toxic.
+- Switching e party multi-Pokémon (`#32`–`#33`), PP e `Struggle` (`#34`), abilità (`#35`–`#36`), `Cascade` dipendente per `TripleKick` (`#37`).
+- Critici, oggetti, durata del meteo e mosse per `RAIN`/`SANDSTORM`/`HAIL`.
 - Salvataggi, caricamento partita, account.
-- Test automatici.
 - Interfaccia web.
 - PokéAPI.
 - Database.
@@ -254,13 +258,24 @@ Non generare una classe per ogni mossa API: sarebbe l'opposto del design del vid
 | 13 | `Drain` non cura su danno 0; `RestoreHP` non stampa cura a HP pieni | `Drain`, `RestoreHP`, issue #22 | I messaggi e gli HP corrispondono alla cura reale; verificato in `HealingEdgeCaseTest` |
 | 14 | `MoveRegistry.get` fallisce rumorosamente su chiave sconosciuta | `MoveRegistry`, `PokemonLoader`, issue #22 | Un typo solleva `IllegalArgumentException("Unknown move: <key>")`; verificato in `MoveRegistryTest` |
 | 15 | Collegare tutte le primitive video residue (`SetHP`, `PainSplit`, `SelfDestruct`, `Counter`, `Psywave`, `Endeavor`) | `SetHP`, `Leq`, `Geq`, `MoveRegistry`, issue #23 | `Faint`, `LastDamageDealt`, `Between`, `Leq`, `Geq` hanno chiamanti attivi; verificato in `VideoDslMovesTest` |
-| 16 | Randomizer con seed in `Battle` e suite di regressione JUnit 5 | `Battle`, `BattleEngine`, `Main`, issues #16, #24 | Determinismo `--seed`, 11 classi di test JUnit 5, 48 test verdi |
+| 16 | Randomizer con seed in `Battle` e suite di regressione JUnit 5 | `Battle`, `BattleEngine`, `Main`, issues #16, #24 | Determinismo `--seed`, 11 classi di test JUnit 5 iniziali (48 test verdi al termine di Fase 2) |
 
 ### Fase 3 — Documentazione e verifica (completata per issue #14 e #24)
 
 - Aggiornate le "Fidelity notes" di `CONTEXT.md` documentando RNG seedabile in `Battle`, scaling Livello 50, categorie di danno, status mutuamente esclusivi, ordine di round/priorità, guardie di cura, mosse video DSL e suite JUnit 5.
 - Aggiornata la roadmap di `FINDINGS.md` marcando Fase 1, Fase 2 e Fase 3 come completate.
-- Aggiunta suite di test automatizzata con JUnit 5 (48 test, 0 fallimenti).
+
+### Fase 4 — Complete Video DSL & Expanded Battle Mechanics (in corso, map #25)
+
+Completate e verificate in `main`:
+- **#26**: `MoveRegistry.keys()` e copertura completa di tutte le 36 mosse in `pokemon.csv` (inclusi `PainSplit`, `SelfDestruct`, `Counter`, `Psywave`, `Endeavor`, `CrossChop`).
+- **#27**: Overloads di `Attempt` con accuratezza di default `1.0`.
+- **#28**: `Max` e `ConditionalNumber` collegati a `Psywave` e `Brine` (Dewgong).
+- **#29**: `Probability(INumber)` con clamp `[0.0, 1.0]` e `Guillotine` con precondizione `Geq(Level(ATK), Level(DEF))` e scaling `(AtkLv - DefLv + 30) / 100`.
+- **#30**: Copertura completa di `Or` e dei 6 predicati `Is*` in `StatusConditionsTest`; `Venoshock` (65 -> 130 su avvelenati) su Muk.
+- **#31**: `Weather` (`NONE`/`SUN`/`RAIN`/`SANDSTORM`/`HAIL`), `HasWeather`, `SetWeather`, persistenza multi-round in `BattleEngine`, `SunnyDay` e `SolarBeam` su Ninetales (`WeatherTest` verdi; fixed-seed `27` vs `52` per via del `+2.0` in `FormulaDamage`).
+
+Rimangono aperte in `#25`: `#32`–`#33` (1v1/2v2 switching), `#34` (PP & `Struggle`), `#35`–`#36` (abilità), `#37` (`Cascade` dipendente per `TripleKick`), `#38` (sync finale Fase 4).
 
 ## Cosa non era stato verificato manualmente (risolto in JUnit 5)
 

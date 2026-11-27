@@ -27,8 +27,8 @@ roster, type chart, status rules and battle loop are additions needed to make it
 | Build | Maven (`pom.xml`), executable JAR |
 | Entry point | `com.pokemon.Main` |
 | Data | `src/main/resources/pokemon.csv` |
-| Dependencies | none |
-| Tests | none; the battle loop is the integration test |
+| Dependencies | none at runtime; JUnit 5 is `test`-scoped |
+| Tests | 13 JUnit 5 classes, 78 tests (`mvn test`); the battle loop is still the integration test |
 
 ## Build and run
 
@@ -232,6 +232,24 @@ across issues #16–#24 with automated JUnit 5 tests and seeded deterministic CL
 
 9. **Automated JUnit 5 Test Suite (#16–#24):**
    11 test classes covering RNG determinism, Level-50 stats, physical/special damage, statuses, turn order, residual damage, healing guards, video DSL moves, Fase 1 edge cases (`Fase1EdgeCaseTest`), and full multi-turn simulations (`Fase2SimulationTest`).
+
+### Fase 4 DSL & Engine Extensions (in progress, #26–#31)
+
+1. **Roster Reachability & `MoveRegistry.keys()` (#26):**
+   `MoveRegistry.keys()` exposes all 36 registered keys and `PokemonLoaderTest` enforces that every registered move is assigned to at least one species in `pokemon.csv`. Machop keeps `JumpKick` and restores `CrossChop`; `PainSplit` (Gengar), `SelfDestruct` (Weezing), `Counter` (Onix), `Psywave` (Alakazam), and `Endeavor` (Pidgeot) are all playable in the CLI.
+2. **Default-Accuracy `Attempt` Overloads (#27):**
+   `Attempt` exposes 2-arg and 4-arg constructors defaulting `accuracy` to `new Probability<>(1.0)` (still drawing through `Battle` RNG so seeded output stays deterministic). `WithPrecondition` also supports both 2-arg (`"  But it failed!"`) and 3-arg custom-message constructors and delegates `priority()`.
+3. **`Max` & `ConditionalNumber` Composites (#28):**
+   `Max(left, right)` and `ConditionalNumber(condition, whenTrue, whenFalse)` implement `INumber`; wired into `Psywave` (minimum 1 damage floor) and `Brine` (`65 -> 130` special power when `CurrentHP(DEF) <= 0.5 * MaxHP(DEF)`, assigned to Dewgong).
+4. **Dynamic `Probability(INumber)` & `Guillotine` Level Rules (#29):**
+   `Probability(INumber)` clamps evaluated probability to `[0.0, 1.0]` and requires a `Battle` input (`IllegalArgumentException` otherwise). `Guillotine` checks `WithPrecondition(Geq(Level(ATK), Level(DEF)))` and scales accuracy via `(Level(ATK) - Level(DEF) + 30) / 100`. All species in `pokemon.csv` are Level 50, so `< Lv` failure and `> 30%` scaling are covered in JUnit only.
+5. **`Or` & Granular `Is*` Conditions (`Venoshock`, #30):**
+   `StatusConditionsTest` tests all six `Is*` leaves (`IsParalyzed`, `IsBurned`, `IsAsleep`, `IsFrozen`, `IsPoisoned`, `IsBadlyPoisoned`) and `Or` short-circuiting. `Venoshock` doubles special base power (`65 -> 130`) via `ConditionalNumber(For(DEF, Or(IsPoisoned, IsBadlyPoisoned)), ...)` on Muk; status-inflicting moves keep `HasMajorStatus` for single-status exclusivity.
+6. **Weather State, `HasWeather`, `SetWeather` (#31):**
+   `Weather` (`NONE`, `SUN`, `RAIN`, `SANDSTORM`, `HAIL`), `Battle.getWeather()/setWeather()`, `HasWeather` (`ICondition<Battle>`), and `SetWeather` (`IEffect`) model battle-wide weather. `BattleEngine` persists `weather` across rounds and prints `Weather: <NAME>` when active (`!= NONE`). `SunnyDay` and `SolarBeam` (`ConditionalNumber(HasWeather(Weather.SUN), 120, 60)`) are assigned to Ninetales. Weather currently has no turn-duration expiry, and because `FormulaDamage` adds `+2.0` outside the power term, doubling base power (`60 -> 120`) produces `27` vs `52` damage (not `2x` final damage).
+7. **Known Edge Case (`CrashDamage` vs `LastDamageDealt`):**
+   `CrashDamage` writes self-inflicted crash damage to `battle.setLastDamageDealt(dmg)`, so if the faster attacker misses `JumpKick` and survives while the defender uses `Counter` in the same round, `Counter` reads the attacker's crash damage as `LastDamageDealt`.
+8. **Current Test Coverage:** 13 JUnit 5 test classes, 78 passing tests (`mvn test`). Remaining Fase 4 tickets: `#32`–`#33` (1v1/2v2 party & switching), `#34` (PP & `Struggle`), `#35`–`#36` (Abilities), `#37` (dependent `Cascade` & `TripleKick`), and `#38` (final doc sync).
 
 ### `LastDamageDealt` is targetless — as the video concludes
 
