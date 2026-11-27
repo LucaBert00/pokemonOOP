@@ -479,13 +479,26 @@ public class BattleEngine
         }
         else if (playerParty.isDefeated())
         {
-            System.out.println("  " + cpu.getName() + " wins! You lost...");
+            System.out.println("  " + winningName(cpuParty, cpu) + " wins! You lost...");
         }
         else
         {
-            System.out.println("  " + player.getName() + " wins! You won!");
+            System.out.println("  " + winningName(playerParty, player) + " wins! You won!");
         }
         printDivider('=', 56);
+    }
+
+    /** Names a surviving party member; the active is used only if every member fainted. */
+    private static String winningName(Party party, Battler fallback)
+    {
+        for (Battler member : party.getMembers())
+        {
+            if (!member.isFainted())
+            {
+                return member.getName();
+            }
+        }
+        return fallback.getName();
     }
 
     private static void printDivider(char ch, int len)

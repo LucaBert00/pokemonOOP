@@ -1,6 +1,7 @@
 package com.pokemon.battle;
 
 import com.pokemon.BattleEngine;
+import com.pokemon.api.IEffect;
 import com.pokemon.api.IMove;
 import com.pokemon.attempts.Attempt;
 import com.pokemon.conditions.Probability;
@@ -195,5 +196,30 @@ class PartySwitchTest
         assertTrue(output.contains("CpuBench was sent out!"), output);
         assertTrue(cpuParty.isDefeated(), "Battle must end only after the whole CPU party faints");
         assertFalse(playerParty.isDefeated());
+    }
+
+    @Test
+    void winnerDeclarationNamesASurvivingBenchMemberWhenTheActiveFaintsWithItsOpponent()
+    {
+        IEffect doubleKo = battle ->
+        {
+            battle.getDefender().takeDamage(999);
+            battle.getAttacker().takeDamage(999);
+        };
+        IMove boom = new Move("Boom", Element.NORMAL,
+            new Attempt("Boom", new Probability<>(1.0), doubleKo));
+
+        Battler fragile    = battler("Frail", 1, 10, List.of(waitMove()));
+        Battler cpuActive  = battler("Boomer", 300, 300, List.of(boom));
+        Battler cpuSurvivor = battler("Survivor", 300, 50, List.of(waitMove()));
+
+        Party playerParty = new Party(List.of(fragile));
+        Party cpuParty    = new Party(List.of(cpuActive, cpuSurvivor));
+
+        String output = captureStdOut(() ->
+            new BattleEngine(playerParty, cpuParty, scanner(script("1")), 42L).run());
+
+        assertTrue(output.contains("Survivor wins! You lost..."), output);
+        assertFalse(output.contains("Boomer wins!"), output);
     }
 }
