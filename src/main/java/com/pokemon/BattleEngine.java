@@ -3,6 +3,7 @@ package com.pokemon;
 import com.pokemon.api.IMove;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.Party;
 import com.pokemon.battle.TurnOrder;
 import com.pokemon.battle.Weather;
 import com.pokemon.conditions.Probability;
@@ -16,33 +17,60 @@ import java.util.Scanner;
 
 /**
  * Drives the terminal battle loop.
- * Handles turn order, paralysis checks, move selection, and win detection.
+ * Handles turn order, paralysis checks, move or switch selection, forced
+ * replacement after a faint, and win detection.
  */
 
 public class BattleEngine
 {
-    private final Battler player;
-    private final Battler cpu;
+    private final Party   playerParty;
+    private final Party   cpuParty;
     private final Scanner scanner;
     private final Random  random;
     private Weather weather = Weather.NONE;
 
+    /** Active battlers, kept in sync with the parties after switches and replacements. */
+    private Battler player;
+    private Battler cpu;
+
     public BattleEngine(Battler player, Battler cpu, Scanner scanner)
     {
-        this(player, cpu, scanner, new Random());
+        this(new Party(player), new Party(cpu), scanner, new Random());
     }
 
     public BattleEngine(Battler player, Battler cpu, Scanner scanner, long seed)
     {
-        this(player, cpu, scanner, new Random(seed));
+        this(new Party(player), new Party(cpu), scanner, new Random(seed));
     }
 
     public BattleEngine(Battler player, Battler cpu, Scanner scanner, Random random)
     {
-        this.player  = player;
-        this.cpu     = cpu;
-        this.scanner = scanner;
-        this.random  = Objects.requireNonNull(random, "random must not be null");
+        this(new Party(player), new Party(cpu), scanner, random);
+    }
+
+    public BattleEngine(Party playerParty, Party cpuParty, Scanner scanner)
+    {
+        this(playerParty, cpuParty, scanner, new Random());
+    }
+
+    public BattleEngine(Party playerParty, Party cpuParty, Scanner scanner, long seed)
+    {
+        this(playerParty, cpuParty, scanner, new Random(seed));
+    }
+
+    public BattleEngine(Party playerParty, Party cpuParty, Scanner scanner, Random random)
+    {
+        this.playerParty = Objects.requireNonNull(playerParty, "playerParty must not be null");
+        this.cpuParty    = Objects.requireNonNull(cpuParty, "cpuParty must not be null");
+        this.scanner     = Objects.requireNonNull(scanner, "scanner must not be null");
+        this.random      = Objects.requireNonNull(random, "random must not be null");
+        syncActives();
+    }
+
+    private void syncActives()
+    {
+        player = playerParty.getActive();
+        cpu    = cpuParty.getActive();
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
@@ -55,36 +83,59 @@ public class BattleEngine
 
         int turnNumber = 1;
 
-        while (!player.isFainted() && !cpu.isFainted())
+        while (!playerParty.isDefeated() && !cpuParty.isDefeated())
         {
             System.out.println("\n  ─── Turn " + turnNumber + " ───");
 
             // Simultaneous blind selection: collect both choices before executing either
-            IMove playerMove = promptPlayerMove();
-            IMove cpuMove    = pickCpuMove(cpu.getMoves());
+            RoundAction playerAction = promptPlayerAction();
+            IMove cpuMove            = pickCpuMove(cpu.getMoves());
 
-            // Resolve round order by move priority, effective speed, and seeded tie-break
-            TurnOrder.RoundPlan plan = TurnOrder.resolve(player, playerMove, cpu, cpuMove, random);
+            Battle battle;
 
-            // One Battle per round, oriented with first mover as attacker
-            Battle battle = plan.createBattle(random);
-            battle.setWeather(weather);
-
-            executeHalfTurn(battle, plan.firstMove());
-
-            if (!player.isFainted() && !cpu.isFainted())
+            if (playerAction.isSwitch())
             {
+                // Switches resolve before any move; the opponent still acts this round.
+                battle = new Battle(playerParty, cpuParty, random);
+                battle.setWeather(weather);
+                System.out.println();
+                System.out.println("  " + player.getName() + ", come back!");
+                battle.switchAttacker(playerAction.switchIndex());
+                syncActives();
+                System.out.println("  Go, " + player.getName() + "!");
+
                 battle.flipTurn();
-                executeHalfTurn(battle, plan.secondMove());
+                executeHalfTurn(battle, cpuMove);
+            }
+            else
+            {
+                // Resolve round order by move priority, effective speed, and seeded tie-break
+                TurnOrder.RoundPlan plan = TurnOrder.resolve(player, playerAction.move(), cpu, cpuMove, random);
+                boolean playerFirst      = plan.first() == player;
+
+                battle = new Battle(playerFirst ? playerParty : cpuParty,
+                                    playerFirst ? cpuParty : playerParty,
+                                    random);
+                battle.setWeather(weather);
+
+                executeHalfTurn(battle, plan.firstMove());
+
+                if (!plan.first().isFainted() && !plan.second().isFainted()
+                    && !playerParty.isDefeated() && !cpuParty.isDefeated())
+                {
+                    battle.flipTurn();
+                    executeHalfTurn(battle, plan.secondMove());
+                }
             }
 
             // Residual damage ticks only while the battle is undecided; a KO ends the round.
-            if (!player.isFainted() && !cpu.isFainted())
+            if (!playerParty.isDefeated() && !cpuParty.isDefeated())
             {
                 applyEndOfRoundDamage();
             }
 
             weather = battle.getWeather();
+            resolveFaints();
             printStatus();
             turnNumber++;
         }
@@ -142,6 +193,72 @@ public class BattleEngine
         move.execute(battle);
     }
 
+    // ── Forced replacement after a faint ──────────────────────────────────────
+    private void resolveFaints()
+    {
+        if (playerParty.isDefeated() || cpuParty.isDefeated())
+        {
+            return;
+        }
+
+        if (player.isFainted() && playerParty.hasHealthyBench())
+        {
+            System.out.println();
+            System.out.println("  " + player.getName() + " fainted!");
+            promptReplacement();
+            System.out.println("  Go, " + player.getName() + "!");
+        }
+
+        if (cpu.isFainted() && cpuParty.hasHealthyBench())
+        {
+            System.out.println();
+            System.out.println("  " + cpu.getName() + " fainted!");
+            cpuParty.replaceFaintedActive();
+            syncActives();
+            System.out.println("  " + cpu.getName() + " was sent out!");
+        }
+    }
+
+    private void promptReplacement()
+    {
+        List<Battler> members = playerParty.getMembers();
+        System.out.println("  Choose your next Pokémon:");
+        for (int i = 0; i < members.size(); i++)
+        {
+            Battler member = members.get(i);
+            if (i != playerParty.getActiveIndex() && !member.isFainted())
+            {
+                System.out.printf("    [%d] %s%n", i + 1, member);
+            }
+        }
+        System.out.print("  > ");
+
+        while (true)
+        {
+            if (!scanner.hasNextLine())
+            {
+                throw new IllegalStateException("No replacement input available");
+            }
+            try
+            {
+                int choice = Integer.parseInt(scanner.nextLine().trim());
+                if (choice >= 1 && choice <= members.size()
+                    && choice - 1 != playerParty.getActiveIndex()
+                    && !members.get(choice - 1).isFainted())
+                {
+                    playerParty.switchTo(choice - 1);
+                    syncActives();
+                    return;
+                }
+            }
+            catch (NumberFormatException ignored)
+            {
+                // Nothing
+            }
+            System.out.print("  Choose a healthy bench Pokémon: ");
+        }
+    }
+
     // ── End-of-round residual status damage ───────────────────────────────────
     private void applyEndOfRoundDamage()
     {
@@ -184,21 +301,32 @@ public class BattleEngine
         return moves.get(random.nextInt(moves.size()));
     }
 
-    // ── Player move prompt ────────────────────────────────────────────────────
-    private IMove promptPlayerMove()
+    // ── Player action prompt (move or voluntary switch) ───────────────────────
+    private RoundAction promptPlayerAction()
     {
         List<IMove> moves = player.getMoves();
+        boolean canSwitch = playerParty.hasHealthyBench();
+        int switchChoice  = moves.size() + 1;
+
         System.out.println("\n  What will " + player.getName() + " do?");
 
         for (int i = 0; i < moves.size(); i++)
         {
             System.out.printf("    [%d] %s%n", i + 1, moveName(moves.get(i)));
         }
+        if (canSwitch)
+        {
+            System.out.printf("    [%d] Switch Pokémon%n", switchChoice);
+        }
 
         System.out.print("  > ");
 
         while (true)
         {
+            if (!scanner.hasNextLine())
+            {
+                throw new IllegalStateException("No action input available");
+            }
             try
             {
                 String line = scanner.nextLine().trim();
@@ -206,7 +334,11 @@ public class BattleEngine
 
                 if (choice >= 1 && choice <= moves.size())
                 {
-                    return moves.get(choice - 1);
+                    return RoundAction.ofMove(moves.get(choice - 1));
+                }
+                if (canSwitch && choice == switchChoice)
+                {
+                    return promptSwitchTarget();
                 }
             }
             catch (NumberFormatException ignored)
@@ -214,7 +346,65 @@ public class BattleEngine
                 // Nothing
             }
 
-            System.out.print("  Invalid choice. Enter 1–" + moves.size() + ": ");
+            int max = canSwitch ? switchChoice : moves.size();
+            System.out.print("  Invalid choice. Enter 1–" + max + ": ");
+        }
+    }
+
+    private RoundAction promptSwitchTarget()
+    {
+        List<Battler> members = playerParty.getMembers();
+
+        System.out.println("\n  Choose a Pokémon to switch in:");
+        for (int i = 0; i < members.size(); i++)
+        {
+            Battler member = members.get(i);
+            if (i != playerParty.getActiveIndex() && !member.isFainted())
+            {
+                System.out.printf("    [%d] %s%n", i + 1, member);
+            }
+        }
+        System.out.print("  > ");
+
+        while (true)
+        {
+            if (!scanner.hasNextLine())
+            {
+                throw new IllegalStateException("No switch input available");
+            }
+            try
+            {
+                int choice = Integer.parseInt(scanner.nextLine().trim());
+                if (choice >= 1 && choice <= members.size()
+                    && choice - 1 != playerParty.getActiveIndex()
+                    && !members.get(choice - 1).isFainted())
+                {
+                    return RoundAction.ofSwitch(choice - 1);
+                }
+            }
+            catch (NumberFormatException ignored)
+            {
+                // Nothing
+            }
+            System.out.print("  Choose a healthy bench Pokémon: ");
+        }
+    }
+
+    private record RoundAction(IMove move, int switchIndex)
+    {
+        static RoundAction ofMove(IMove move)
+        {
+            return new RoundAction(Objects.requireNonNull(move, "move must not be null"), -1);
+        }
+
+        static RoundAction ofSwitch(int switchIndex)
+        {
+            return new RoundAction(null, switchIndex);
+        }
+
+        boolean isSwitch()
+        {
+            return move == null;
         }
     }
 
@@ -229,6 +419,24 @@ public class BattleEngine
         if (weather != Weather.NONE)
         {
             System.out.println("  Weather: " + weather.name());
+        }
+        if (playerParty.getMembers().size() > 1 || cpuParty.getMembers().size() > 1)
+        {
+            printBench(playerParty);
+            printBench(cpuParty);
+        }
+    }
+
+    private static void printBench(Party party)
+    {
+        for (int i = 0; i < party.getMembers().size(); i++)
+        {
+            if (i == party.getActiveIndex())
+            {
+                continue;
+            }
+            Battler member = party.getMembers().get(i);
+            System.out.printf("  bench: %-14s %s%n", member.getName(), member.hpBar());
         }
     }
 
@@ -265,11 +473,11 @@ public class BattleEngine
     {
         printDivider('=', 56);
 
-        if (player.isFainted() && cpu.isFainted())
+        if (playerParty.isDefeated() && cpuParty.isDefeated())
         {
             System.out.println("  It's a draw!");
         }
-        else if (player.isFainted())
+        else if (playerParty.isDefeated())
         {
             System.out.println("  " + cpu.getName() + " wins! You lost...");
         }
