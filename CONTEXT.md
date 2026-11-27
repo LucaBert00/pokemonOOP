@@ -28,7 +28,7 @@ roster, type chart, status rules and battle loop are additions needed to make it
 | Entry point | `com.pokemon.Main` |
 | Data | `src/main/resources/pokemon.csv` |
 | Dependencies | none at runtime; JUnit 5 is `test`-scoped |
-| Tests | 13 JUnit 5 classes, 78 tests (`mvn test`); the battle loop is still the integration test |
+| Tests | 14 JUnit 5 classes, 84 tests (`mvn test`); the battle loop is still the integration test |
 
 ## Build and run
 
@@ -50,12 +50,15 @@ pick a Pokémon by number, then pick a move by number each turn.
 ## What the program does
 
 1. `Main` loads the roster from `pokemon.csv` through `PokemonLoader`.
-2. The player picks a fighter; the CPU picks a different one at random.
-3. `BattleEngine` runs rounds. The faster battler acts first.
+2. The player chooses 1v1 or 2v2, then picks one or two Pokémon; the CPU picks a
+   distinct team of the same size at random.
+3. `BattleEngine` runs rounds over each side's `Party`. The faster battler acts first.
 4. Before acting, sleep, freeze and paralysis are checked; each can skip the turn.
 5. The chosen `IMove` is executed with a `Battle` holding attacker and defender.
 6. After the move, burn, poison and badly-poison damage is applied to the attacker.
-7. The round repeats until one side faints.
+7. The player may switch voluntarily; a switch resolves before either move.
+8. When an active Pokémon faints and its party has a healthy bench member, that
+   member replaces it. The battle ends only when a whole party has fainted.
 
 Everything between steps 4 and 6 is the DSL. The engine only decides *when* to call
 `execute`; the move decides *what happens*.
@@ -76,7 +79,7 @@ They live in `com.pokemon.api`. Implementations live in `moves`, `attempts`, `ef
 
 | Package | Contents |
 |---|---|
-| `battle` | `Battle` (turn state), `Battler` (stats, status, moves), `Element` |
+| `battle` | `Battle` (turn state), `Party` (active/bench), `Battler` (stats, status, moves), `TurnOrder`, `Element`, `Weather` |
 | `moves` | `Move` leaf and the two `IMove` decorators |
 | `attempts` | `Attempt` leaf, `Cascade`, `Combo` |
 | `effects` | damage, status, healing, `Sequence`, `ConditionalEffect`, `NoEffect` |
@@ -233,7 +236,7 @@ across issues #16–#24 with automated JUnit 5 tests and seeded deterministic CL
 9. **Automated JUnit 5 Test Suite (#16–#24):**
    11 test classes covering RNG determinism, Level-50 stats, physical/special damage, statuses, turn order, residual damage, healing guards, video DSL moves, Fase 1 edge cases (`Fase1EdgeCaseTest`), and full multi-turn simulations (`Fase2SimulationTest`).
 
-### Fase 4 DSL & Engine Extensions (in progress, #26–#31)
+### Fase 4 DSL & Engine Extensions (in progress, #26–#32)
 
 1. **Roster Reachability & `MoveRegistry.keys()` (#26):**
    `MoveRegistry.keys()` exposes all 36 registered keys and `PokemonLoaderTest` enforces that every registered move is assigned to at least one species in `pokemon.csv`. Machop keeps `JumpKick` and restores `CrossChop`; `PainSplit` (Gengar), `SelfDestruct` (Weezing), `Counter` (Onix), `Psywave` (Alakazam), and `Endeavor` (Pidgeot) are all playable in the CLI.
@@ -247,9 +250,19 @@ across issues #16–#24 with automated JUnit 5 tests and seeded deterministic CL
    `StatusConditionsTest` tests all six `Is*` leaves (`IsParalyzed`, `IsBurned`, `IsAsleep`, `IsFrozen`, `IsPoisoned`, `IsBadlyPoisoned`) and `Or` short-circuiting. `Venoshock` doubles special base power (`65 -> 130`) via `ConditionalNumber(For(DEF, Or(IsPoisoned, IsBadlyPoisoned)), ...)` on Muk; status-inflicting moves keep `HasMajorStatus` for single-status exclusivity.
 6. **Weather State, `HasWeather`, `SetWeather` (#31):**
    `Weather` (`NONE`, `SUN`, `RAIN`, `SANDSTORM`, `HAIL`), `Battle.getWeather()/setWeather()`, `HasWeather` (`ICondition<Battle>`), and `SetWeather` (`IEffect`) model battle-wide weather. `BattleEngine` persists `weather` across rounds and prints `Weather: <NAME>` when active (`!= NONE`). `SunnyDay` and `SolarBeam` (`ConditionalNumber(HasWeather(Weather.SUN), 120, 60)`) are assigned to Ninetales. Weather currently has no turn-duration expiry, and because `FormulaDamage` adds `+2.0` outside the power term, doubling base power (`60 -> 120`) produces `27` vs `52` damage (not `2x` final damage).
-7. **Known Edge Case (`CrashDamage` vs `LastDamageDealt`):**
+7. **1v1 & 2v2 Parties, Switching (#32):**
+   `Party` holds one active `Battler` plus its bench and exposes `getHealthyBench()`,
+   `switchTo`, `replaceFaintedActive` and `isDefeated`. `Battle` keeps one `Party` per
+   side (the legacy 2-`Battler` constructors wrap single-member parties) and
+   `switchAttacker`/`switchDefender` clear the volatile round slots before `flipTurn`.
+   `BattleEngine` resolves a voluntary switch before either move, prompts the player to
+   replace a fainted active while a healthy bench remains, replaces automatically for the
+   CPU, and ends only when a whole party has fainted. `Main` asks for 1v1/2v2 and picks
+   1 or 2 distinct Pokémon per side. The CPU never switches voluntarily, and party
+   sizes above 2 are out of scope.
+8. **Known Edge Case (`CrashDamage` vs `LastDamageDealt`):**
    `CrashDamage` writes self-inflicted crash damage to `battle.setLastDamageDealt(dmg)`, so if the faster attacker misses `JumpKick` and survives while the defender uses `Counter` in the same round, `Counter` reads the attacker's crash damage as `LastDamageDealt`.
-8. **Current Test Coverage:** 13 JUnit 5 test classes, 78 passing tests (`mvn test`). Remaining Fase 4 tickets: `#32`–`#33` (1v1/2v2 party & switching), `#34` (PP & `Struggle`), `#35`–`#36` (Abilities), `#37` (dependent `Cascade` & `TripleKick`), and `#38` (final doc sync).
+9. **Current Test Coverage:** 14 JUnit 5 test classes, 84 passing tests (`mvn test`). Remaining Fase 4 tickets: `#33` (bench/switch DSL), `#34` (PP & `Struggle`), `#35`–`#36` (Abilities), `#37` (dependent `Cascade` & `TripleKick`), and `#38` (final doc sync).
 
 ### `LastDamageDealt` is targetless — as the video concludes
 

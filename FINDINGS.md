@@ -83,8 +83,9 @@ usa.
 ### Funziona (verificato)
 
 - Caricamento di **16 Pokémon** da `pokemon.csv` e **36 mosse** da `MoveRegistry` (tutte raggiungibili dal roster CSV; `PokemonLoaderTest`).
-- Suite JUnit 5 attiva: **13 classi di test, 78 test verdi** (`mvn test`).
+- Suite JUnit 5 attiva: **14 classi di test, 84 test verdi** (`mvn test`).
 - Selezione del giocatore, CPU casuale diversa, ordine per Speed.
+- Modalità 1v1/2v2, scelta di 1–2 Pokémon per lato, switch volontario risolto prima delle mosse, sostituzione forzata al faint (prompt per il giocatore, automatica per la CPU) e vittoria solo a party esaurita (`PartySwitchTest`).
 - Menu, attacco, danno con STAB e type chart, faint, vittoria/sconfitta.
 - Controlli di sonno, congelamento e paralisi prima dell'azione.
 - Mosse decorate, mosse di stato, cura, drain, multi-hit, OHKO, cambio statistica.
@@ -152,14 +153,15 @@ Non osservato o non verificabile con il terminale e il roster attuali:
    typo nel CSV diventa una mossa normale senza errore.
 9. **Codice morto:** `Faint`, `Between`, `Leq`, `Geq`, `LastDamageDealt`,
    `Battle.flipTurn`, `MoveRegistry.displayName`. *(Risolto tra Fase 1 e Fase 2: `displayName` rimosso in #10, `flipTurn` collegato in #20, `Faint`/`Between`/`Leq`/`Geq`/`LastDamageDealt` collegati in #23.)*
-10. **Limiti noti post-Fase 2 / Fase 4 (#26–#31):**
+10. **Limiti noti post-Fase 2 / Fase 4 (#26–#32):**
+   - La CPU non effettua switch volontari e le taglie oltre 2v2 restano fuori scope (#32).
    - `CrashDamage` scrive su `battle.setLastDamageDealt(dmg)`: se chi attacca per primo manca `JumpKick` e sopravvive al crash nello stesso round di `Counter`, `Counter` legge il danno da crash come `LastDamageDealt`.
    - Tutti i Pokémon in `pokemon.csv` sono a Livello 50: i rami `< Lv` e scaling `> 30%` di `Guillotine` (#29) sono coperti in JUnit ma non raggiungibili dal roster CSV.
    - `Weather` (#31) persiste indefinitamente finché non viene sovrascritto (nessun contatore di durata turni) e finora solo `Weather.SUN` ha mosse dedicate (`SunnyDay`, `SolarBeam`); `RAIN`/`SANDSTORM`/`HAIL` hanno enum, `HasWeather` e `SetWeather` pronti ma nessuna mossa ancora collegata.
 
 ### È vuoto (non implementato, non necessariamente un problema)
 
-- Switching e party multi-Pokémon (`#32`–`#33`), PP e `Struggle` (`#34`), abilità (`#35`–`#36`), `Cascade` dipendente per `TripleKick` (`#37`).
+- Mosse DSL per lo switching (`#33`: `HasBenchPokemon`/`ForceSwitch`), PP e `Struggle` (`#34`), abilità (`#35`–`#36`), `Cascade` dipendente per `TripleKick` (`#37`).
 - Critici, oggetti, durata del meteo e mosse per `RAIN`/`SANDSTORM`/`HAIL`.
 - Salvataggi, caricamento partita, account.
 - Interfaccia web.
@@ -275,7 +277,9 @@ Completate e verificate in `main`:
 - **#30**: Copertura completa di `Or` e dei 6 predicati `Is*` in `StatusConditionsTest`; `Venoshock` (65 -> 130 su avvelenati) su Muk.
 - **#31**: `Weather` (`NONE`/`SUN`/`RAIN`/`SANDSTORM`/`HAIL`), `HasWeather`, `SetWeather`, persistenza multi-round in `BattleEngine`, `SunnyDay` e `SolarBeam` su Ninetales (`WeatherTest` verdi; fixed-seed `27` vs `52` per via del `+2.0` in `FormulaDamage`).
 
-Rimangono aperte in `#25`: `#32`–`#33` (1v1/2v2 switching), `#34` (PP & `Struggle`), `#35`–`#36` (abilità), `#37` (`Cascade` dipendente per `TripleKick`), `#38` (sync finale Fase 4).
+- **#32**: `Party` (attivo + panchina, `switchTo`, `replaceFaintedActive`, `isDefeated`), `Battle` con una `Party` per lato e `switchAttacker`/`switchDefender` che azzerano `lastAttemptHit`/`lastDamageDealt`/`currentMoveElement`, `BattleEngine` con switch volontario prima delle mosse, sostituzione forzata (prompt per il giocatore, automatica per la CPU), fine battaglia solo a party esaurita, `Main` con scelta 1v1/2v2 (`PartySwitchTest`).
+
+Rimangono aperte in `#25`: `#33` (`HasBenchPokemon`/`ForceSwitch` e mossa di switch), `#34` (PP & `Struggle`), `#35`–`#36` (abilità), `#37` (`Cascade` dipendente per `TripleKick`), `#38` (sync finale Fase 4).
 
 ## Cosa non era stato verificato manualmente (risolto in JUnit 5)
 
