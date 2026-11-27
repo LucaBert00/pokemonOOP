@@ -107,7 +107,7 @@ class WeatherTest
     }
 
     @Test
-    void solarBeamDealsDoubleDamageInSunUnderFixedSeed()
+    void solarBeamUsesDoubledBasePowerInSunUnderFixedSeed()
     {
         IMove solarBeam = MoveRegistry.get("SolarBeam");
 
