@@ -4,8 +4,11 @@ import com.pokemon.api.*;
 import com.pokemon.attempts.*;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Element;
+import com.pokemon.battle.Weather;
 import com.pokemon.conditions.*;
+import com.pokemon.conditions.HasWeather;
 import com.pokemon.effects.*;
+import com.pokemon.effects.SetWeather;
 import com.pokemon.moves.*;
 import com.pokemon.numbers.*;
 import com.pokemon.targets.*;
@@ -474,6 +477,28 @@ public class MoveRegistry
                         new For(DEF, new Or<>(new IsPoisoned(), new IsBadlyPoisoned())),
                         new Exactly(130),
                         new Exactly(65)
+                    ),
+                    MoveCategory.SPECIAL
+                )
+            )
+        ));
+
+        registry.put("SunnyDay", new Move(
+            "Sunny Day",
+            Element.FIRE,
+            new Attempt("Sunny Day", new SetWeather(Weather.SUN))
+        ));
+
+        registry.put("SolarBeam", new Move(
+            "Solar Beam",
+            Element.GRASS,
+            new Attempt(
+                "Solar Beam",
+                new FormulaDamage(
+                    new ConditionalNumber(
+                        new HasWeather(Weather.SUN),
+                        new Exactly(120),
+                        new Exactly(60)
                     ),
                     MoveCategory.SPECIAL
                 )
