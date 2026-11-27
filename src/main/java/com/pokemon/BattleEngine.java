@@ -4,6 +4,7 @@ import com.pokemon.api.IMove;
 import com.pokemon.battle.Battle;
 import com.pokemon.battle.Battler;
 import com.pokemon.battle.TurnOrder;
+import com.pokemon.battle.Weather;
 import com.pokemon.conditions.Probability;
 import com.pokemon.moves.Move;
 import com.pokemon.moves.WithApplicability;
@@ -24,6 +25,7 @@ public class BattleEngine
     private final Battler cpu;
     private final Scanner scanner;
     private final Random  random;
+    private Weather weather = Weather.NONE;
 
     public BattleEngine(Battler player, Battler cpu, Scanner scanner)
     {
@@ -66,6 +68,7 @@ public class BattleEngine
 
             // One Battle per round, oriented with first mover as attacker
             Battle battle = plan.createBattle(random);
+            battle.setWeather(weather);
 
             executeHalfTurn(battle, plan.firstMove());
 
@@ -81,6 +84,7 @@ public class BattleEngine
                 applyEndOfRoundDamage();
             }
 
+            weather = battle.getWeather();
             printStatus();
             turnNumber++;
         }
@@ -222,6 +226,10 @@ public class BattleEngine
                 player.getName(), player.hpBar(), statusTag(player));
         System.out.printf("  %-20s %s%s%n",
                 cpu.getName(), cpu.hpBar(), statusTag(cpu));
+        if (weather != Weather.NONE)
+        {
+            System.out.println("  Weather: " + weather.name());
+        }
     }
 
     private static String statusTag(Battler b)

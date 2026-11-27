@@ -24,6 +24,9 @@ public class Battle
     private double  lastDamageDealt;
     private Element currentMoveElement;
 
+    // ── Battle-wide weather ──
+    private Weather weather = Weather.NONE;
+
     // ── Constructors ──
     public Battle(Battler attacker, Battler defender)
     {
@@ -67,4 +70,15 @@ public class Battle
     public void    setLastDamageDealt(double v)    { lastDamageDealt = v; }
     public Element getCurrentMoveElement()         { return currentMoveElement; }
     public void    setCurrentMoveElement(Element e){ currentMoveElement = e; }
+
+    // ── Weather ──
+    public Weather getWeather()
+    {
+        return weather;
+    }
+
+    public void setWeather(Weather weather)
+    {
+        this.weather = Objects.requireNonNull(weather, "weather must not be null");
+    }
 }
