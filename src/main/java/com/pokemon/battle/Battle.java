@@ -5,7 +5,8 @@ import java.util.Random;
 
 /**
  * Represents the state of a single turn.
- * Has an attacker and a defender. Flipping them advances the turn.
+ * Each side is a {@link Party}; the active member of each party is the
+ * attacker or defender. Flipping the sides advances the turn.
  *
  * Extended with helper fields that let combinators communicate:
  *   - lastAttemptHit     : used by Cascade to decide whether to continue
@@ -15,8 +16,8 @@ import java.util.Random;
  */
 public class Battle
 {
-    private Battler attacker;
-    private Battler defender;
+    private Party attackerParty;
+    private Party defenderParty;
     private final Random random;
 
     // ── Communication slots (Cascade, Drain, type effectiveness) ──
@@ -30,31 +31,70 @@ public class Battle
     // ── Constructors ──
     public Battle(Battler attacker, Battler defender)
     {
-        this(attacker, defender, new Random());
+        this(new Party(attacker), new Party(defender), new Random());
     }
 
     public Battle(Battler attacker, Battler defender, long seed)
     {
-        this(attacker, defender, new Random(seed));
+        this(new Party(attacker), new Party(defender), new Random(seed));
     }
 
     public Battle(Battler attacker, Battler defender, Random random)
     {
-        this.attacker = attacker;
-        this.defender = defender;
-        this.random   = Objects.requireNonNull(random, "random must not be null");
+        this(new Party(attacker), new Party(defender), random);
+    }
+
+    public Battle(Party attackerParty, Party defenderParty)
+    {
+        this(attackerParty, defenderParty, new Random());
+    }
+
+    public Battle(Party attackerParty, Party defenderParty, long seed)
+    {
+        this(attackerParty, defenderParty, new Random(seed));
+    }
+
+    public Battle(Party attackerParty, Party defenderParty, Random random)
+    {
+        this.attackerParty = Objects.requireNonNull(attackerParty, "attackerParty must not be null");
+        this.defenderParty = Objects.requireNonNull(defenderParty, "defenderParty must not be null");
+        this.random        = Objects.requireNonNull(random, "random must not be null");
     }
 
     // ── Core access ──
-    public Battler getAttacker() { return attacker; }
-    public Battler getDefender() { return defender; }
+    public Battler getAttacker()      { return attackerParty.getActive(); }
+    public Battler getDefender()      { return defenderParty.getActive(); }
+    public Party   getAttackerParty() { return attackerParty; }
+    public Party   getDefenderParty() { return defenderParty; }
 
     /** Swap sides to begin the next combatant's turn. */
     public void flipTurn()
     {
-        Battler tmp = attacker;
-        attacker    = defender;
-        defender    = tmp;
+        Party tmp    = attackerParty;
+        attackerParty = defenderParty;
+        defenderParty = tmp;
+    }
+
+    // ── Switching ──
+    /** Sends out another member as the attacker, resolving before any move is executed. */
+    public void switchAttacker(int index)
+    {
+        attackerParty.switchTo(index);
+        resetVolatileState();
+    }
+
+    /** Sends out another member as the defender, resolving before any move is executed. */
+    public void switchDefender(int index)
+    {
+        defenderParty.switchTo(index);
+        resetVolatileState();
+    }
+
+    private void resetVolatileState()
+    {
+        lastAttemptHit     = false;
+        lastDamageDealt    = 0.0;
+        currentMoveElement = null;
     }
 
     // ── Randomness helpers ──
