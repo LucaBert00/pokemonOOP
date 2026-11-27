@@ -1,15 +1,18 @@
 package com.pokemon;
 
 import com.pokemon.battle.Battler;
+import com.pokemon.battle.Party;
 import com.pokemon.data.PokemonLoader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 /**
  * Entry point. Loads the Pokémon roster from pokemon.csv,
- * lets the player pick their fighter, assigns a random opponent,
- * then starts the battle engine.
+ * lets the player choose 1v1 or 2v2, pick their team, assigns a random
+ * opponent team, then starts the battle engine.
  *
  * Supports optional CLI flag: {@code --seed <long>} for reproducible runs.
  */
@@ -39,12 +42,18 @@ public class Main
         }
 
         printBanner();
-        Battler player = pickPokemon(scanner, roster);
-        Battler cpu    = pickCpuPokemon(roster, player, random);
-        System.out.println("\n  The CPU chose: " + cpu.getName() + "!");
-        System.out.println("  " + cpu);
+        int partySize = promptPartySize(scanner);
+        List<Battler> playerTeam = pickPlayerTeam(scanner, roster, partySize);
+        List<Battler> cpuTeam    = pickCpuTeam(roster, playerTeam, partySize, random);
 
-        new BattleEngine(player, cpu, scanner, random).run();
+        String cpuNames = cpuTeam.stream().map(Battler::getName).collect(Collectors.joining(" & "));
+        System.out.println("\n  The CPU chose: " + cpuNames + "!");
+        for (Battler battler : cpuTeam)
+        {
+            System.out.println("  " + battler);
+        }
+
+        new BattleEngine(new Party(playerTeam), new Party(cpuTeam), scanner, random).run();
         scanner.close();
     }
 
@@ -92,13 +101,59 @@ public class Main
         }
     }
 
-    // ── Player selection ──
-    private static Battler pickPokemon(Scanner scanner, List<Battler> roster)
+    // ── Party size selection ──
+    private static int promptPartySize(Scanner scanner)
     {
-        System.out.println("\n  Choose your Pokémon:");
-        for (int i = 0; i < roster.size(); i++)
+        System.out.println("\n  Choose battle mode:");
+        System.out.println("    [1] 1v1");
+        System.out.println("    [2] 2v2");
+        System.out.print("\n  > ");
+
+        while (true)
         {
-            System.out.printf("    [%d] %s%n", i + 1, roster.get(i));
+            if (!scanner.hasNextLine())
+            {
+                throw new IllegalStateException("No battle mode input available");
+            }
+            try
+            {
+                int choice = Integer.parseInt(scanner.nextLine().trim());
+                if (choice == 1 || choice == 2)
+                {
+                    return choice;
+                }
+            }
+            catch (NumberFormatException ignored)
+            {
+                // Nothing
+            }
+            System.out.print("  Enter 1 or 2: ");
+        }
+    }
+
+    // ── Player selection ──
+    private static List<Battler> pickPlayerTeam(Scanner scanner, List<Battler> roster, int partySize)
+    {
+        List<Battler> team = new ArrayList<>();
+        for (int slot = 1; slot <= partySize; slot++)
+        {
+            List<Battler> candidates = roster.stream()
+                    .filter(b -> !team.contains(b))
+                    .collect(Collectors.toList());
+            String header = partySize == 1
+                    ? "Choose your Pokémon:"
+                    : "Choose Pokémon " + slot + " of " + partySize + ":";
+            team.add(pickPokemon(scanner, candidates, header));
+        }
+        return team;
+    }
+
+    private static Battler pickPokemon(Scanner scanner, List<Battler> candidates, String header)
+    {
+        System.out.println("\n  " + header);
+        for (int i = 0; i < candidates.size(); i++)
+        {
+            System.out.printf("    [%d] %s%n", i + 1, candidates.get(i));
         }
         System.out.print("\n  > ");
         while (true)
@@ -106,9 +161,9 @@ public class Main
             try
             {
                 int choice = Integer.parseInt(scanner.nextLine().trim());
-                if (choice >= 1 && choice <= roster.size())
+                if (choice >= 1 && choice <= candidates.size())
                 {
-                    Battler pick = roster.get(choice - 1);
+                    Battler pick = candidates.get(choice - 1);
                     System.out.println("\n  You chose: " + pick.getName() + "!");
                     return pick;
                 }
@@ -116,17 +171,24 @@ public class Main
             catch (NumberFormatException ignored)
             {
             }
-            System.out.print("  Enter 1-" + roster.size() + ": ");
+            System.out.print("  Enter 1-" + candidates.size() + ": ");
         }
     }
 
-    // ── CPU selection (random, not same as player) ──
-    private static Battler pickCpuPokemon(List<Battler> roster, Battler player, Random random)
+    // ── CPU selection (random, distinct from the player's team) ──
+    private static List<Battler> pickCpuTeam(List<Battler> roster, List<Battler> playerTeam,
+                                             int partySize, Random random)
     {
-        List<Battler> choices = roster.stream()
-                .filter(b -> b != player)
-                .collect(java.util.stream.Collectors.toList());
-        return choices.get(random.nextInt(choices.size()));
+        List<Battler> candidates = roster.stream()
+                .filter(b -> !playerTeam.contains(b))
+                .collect(Collectors.toList());
+
+        List<Battler> team = new ArrayList<>();
+        for (int i = 0; i < partySize; i++)
+        {
+            team.add(candidates.remove(random.nextInt(candidates.size())));
+        }
+        return team;
     }
 
     // ── Banner ──

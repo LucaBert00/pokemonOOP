@@ -93,7 +93,8 @@ class BattleRandomDeterminismTest
     @Test
     void mainCliSeedFlagProducesIdenticalOutputAcrossRuns()
     {
-        String scriptedInput = "1\n" + "2\n".repeat(40);
+        // [1] 1v1 mode, [1] Pikachu, then the second move each round.
+        String scriptedInput = "1\n" + "1\n" + "2\n".repeat(40);
         String run1 = runMainWithArgs(new String[]{"--seed", "42"}, scriptedInput);
         String run2 = runMainWithArgs(new String[]{"--seed", "42"}, scriptedInput);
 
